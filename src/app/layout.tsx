@@ -20,7 +20,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      {/* Browser extensions (e.g. ColorZilla) mutate <body> before hydration;
+          suppress the resulting attribute mismatch warning on this element only. */}
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
