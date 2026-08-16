@@ -1,0 +1,152 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 24px;
+}
+
+.ideaBlock,
+.planBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.planBlock {
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+.planHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.planTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.planHint {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.65;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.field > span {
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hint {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.input,
+.textarea,
+.select {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.select {
+  max-width: 180px;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.input:disabled,
+.textarea:disabled {
+  opacity: 0.6;
+}
+
+.primary {
+  align-self: flex-start;
+  padding: 11px 20px;
+  border: none;
+  border-radius: 9px;
+  background: var(--foreground);
+  color: var(--background);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.thinking {
+  margin: 0;
+  font-size: 14px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.error,
+.limit {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.error {
+  background: color-mix(in srgb, #e5484d 14%, transparent);
+  color: #c62a2f;
+}
+
+.limit {
+  background: color-mix(in srgb, #f5a524 18%, transparent);
+  color: #9a5b00;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error {
+    color: #ff9592;
+  }
+
+  .limit {
+    color: #ffc971;
+  }
+}
+
+.usage {
+  margin: 0;
+  font-size: 12px;
+  text-align: right;
+  opacity: 0.55;
+}

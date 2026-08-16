@@ -1,0 +1,73 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.photo {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+.photoFallback {
+  width: 88px;
+  height: 88px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  font-size: 32px;
+  font-weight: 600;
+}
+
+.username {
+  margin: 6px 0 0;
+  font-size: 14px;
+  opacity: 0.6;
+}
+
+.meta {
+  margin: 6px 0 0;
+  font-size: 15px;
+  opacity: 0.7;
+}
+
+.bio {
+  margin: 28px 0 0;
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.detail {
+  margin-top: 26px;
+}
+
+.detailLabel {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: 5px 11px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  border-radius: 999px;
+  font-size: 14px;
+}

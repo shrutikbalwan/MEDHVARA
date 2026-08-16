@@ -1,0 +1,78 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.field span {
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.field input {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+}
+
+.field input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.submit {
+  margin-top: 4px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--foreground);
+  color: var(--background);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.error,
+.notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.error {
+  background: color-mix(in srgb, #e5484d 14%, transparent);
+  color: #c62a2f;
+}
+
+.notice {
+  background: color-mix(in srgb, #30a46c 14%, transparent);
+  color: #1a7f4b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error {
+    color: #ff9592;
+  }
+
+  .notice {
+    color: #70d69f;
+  }
+}

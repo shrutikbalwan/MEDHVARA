@@ -1,0 +1,202 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+.statusField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.field > span {
+  font-weight: 500;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.hint {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input,
+.textarea,
+.select {
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.select {
+  max-width: 200px;
+  font-size: 14px;
+}
+
+.textarea {
+  resize: vertical;
+}
+
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+.body {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.list,
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.primary,
+.secondary,
+.destructive {
+  padding: 9px 16px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.secondary {
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  background: transparent;
+  color: var(--foreground);
+}
+
+.secondary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.destructive {
+  border: 1px solid color-mix(in srgb, #e5484d 45%, transparent);
+  background: transparent;
+  color: #c62a2f;
+}
+
+.destructive:hover:not(:disabled) {
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+}
+
+.primary:disabled,
+.secondary:disabled,
+.destructive:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.danger {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 20px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+}
+
+.dangerText {
+  font-size: 14px;
+  margin-right: 4px;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+  background: color-mix(in srgb, #e5484d 14%, transparent);
+  color: #c62a2f;
+}
+
+@media (prefers-color-scheme: dark) {
+  .destructive {
+    color: #ff9592;
+  }
+
+  .error {
+    color: #ff9592;
+  }
+}
