@@ -161,3 +161,44 @@
   font-size: 12px;
   font-weight: 500;
 }
+
+.sectionCount {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.badgeRow {
+  display: flex;
+  gap: 10px;
+  margin: 0;
+  padding: 2px 0 6px;
+  list-style: none;
+  /* One row that scrolls sideways once there are many badges. */
+  overflow-x: auto;
+}
+
+.badge {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 92px;
+  padding: 12px 6px;
+  border: 1.5px solid color-mix(in srgb, #e3a008 60%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, #e3a008 10%, transparent);
+  text-align: center;
+}
+
+.badgeIcon {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.badgeName {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}

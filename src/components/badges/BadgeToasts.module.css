@@ -1,0 +1,82 @@
+.stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 14px;
+  border: 1.5px solid color-mix(in srgb, #e3a008 60%, transparent);
+  border-radius: 12px;
+  background: var(--background);
+  /* A tinted layer over the solid background, so text stays readable. */
+  background-image: linear-gradient(
+    color-mix(in srgb, #e3a008 12%, transparent),
+    color-mix(in srgb, #e3a008 12%, transparent)
+  );
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 18%, transparent);
+  font-size: 14px;
+  pointer-events: auto;
+  animation: slide-in 0.3s ease-out both;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}
+
+.icon {
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.text {
+  line-height: 1.4;
+}
+
+.close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.close:hover,
+.close:focus-visible {
+  opacity: 1;
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+/* Phones: full width along the bottom edge. */
+@media (max-width: 480px) {
+  .stack {
+    left: 16px;
+    align-items: stretch;
+  }
+}

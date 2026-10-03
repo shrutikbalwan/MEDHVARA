@@ -84,7 +84,7 @@ export function LessonRunner({
       if (result.ok) {
         setSaveState("saved");
         // Same route, so this component keeps its state; the layout's
-        // BadgePopup picks the ids up from the URL.
+        // BadgeToasts picks the ids up from the URL.
         if (result.newBadges.length > 0) {
           router.replace(`${pathname}${badgesQuery(result.newBadges)}`, { scroll: false });
         }

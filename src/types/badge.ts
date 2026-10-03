@@ -19,7 +19,7 @@ export const BADGE_IDS = [
 
 export type BadgeId = (typeof BADGE_IDS)[number];
 
-/** A row of public.badges, as shown in the "Badge earned!" popup. */
+/** A row of public.badges, as shown in the "Badge earned" toast. */
 export type Badge = {
   id: string;
   name: string;

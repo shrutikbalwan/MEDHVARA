@@ -47,7 +47,7 @@ const RULES: Record<BadgeId, { needs: (keyof Loaded)[]; earned: (f: Facts) => bo
 /**
  * Evaluates every badge rule against the user's real data and inserts the ones
  * they newly qualify for into user_badges. Returns only the badges earned by
- * THIS call, ready for a "Badge earned!" popup.
+ * THIS call, ready for a "Badge earned" toast.
  *
  * Never throws and never fails the caller's action: badges are a bonus, so any
  * problem is logged and the result is simply fewer (or no) badges. A brand-new
@@ -202,7 +202,7 @@ export async function checkAndAwardBadges(
 }
 
 /**
- * The user's own badges among `ids`, with catalogue details. Used by the popup
+ * The user's own badges among `ids`, with catalogue details. Used by the toast
  * to resolve ids passed in the URL — only badges the user really holds are
  * returned, so a hand-edited link cannot fake an award.
  */
@@ -226,7 +226,7 @@ export async function getOwnedBadges(userId: string, ids: string[]): Promise<Bad
   ]);
 
   if (ownedRes.error || catalogueRes.error) {
-    logStageError("badges", "popup.read", ownedRes.error ?? catalogueRes.error, { userId });
+    logStageError("badges", "toast.read", ownedRes.error ?? catalogueRes.error, { userId });
     return [];
   }
 
@@ -236,4 +236,51 @@ export async function getOwnedBadges(userId: string, ids: string[]): Promise<Bad
     .filter((id) => owned.has(id))
     .map((id) => catalogue.get(id))
     .filter((badge): badge is Badge => Boolean(badge));
+}
+
+export type BadgeStatus = Badge & {
+  /** When the user earned it, or null if not yet earned. */
+  earned_at: string | null;
+};
+
+export type BadgeShowcase = { ok: true; badges: BadgeStatus[] } | { ok: false };
+
+/**
+ * Every badge in the catalogue with the user's earned state, for the profile
+ * grid and the dashboard row. Known badges come first in BADGE_IDS order; any
+ * extra rows someone adds to public.badges follow, by name.
+ */
+export async function listBadgeShowcase(
+  userId: string,
+  client?: ServerClient,
+): Promise<BadgeShowcase> {
+  const supabase = client ?? (await createClient());
+
+  const [catalogueRes, ownedRes] = await Promise.all([
+    supabase.from("badges").select("id, name, description, icon").returns<Badge[]>(),
+    supabase
+      .from("user_badges")
+      .select("badge_id, earned_at")
+      .eq("user_id", userId)
+      .returns<{ badge_id: string; earned_at: string | null }[]>(),
+  ]);
+
+  if (catalogueRes.error || ownedRes.error) {
+    logStageError("badges", "showcase.read", catalogueRes.error ?? ownedRes.error, { userId });
+    return { ok: false };
+  }
+
+  // A row with a null earned_at is still earned; fall back to an empty string
+  // so "earned" is never confused with "missing".
+  const earned = new Map((ownedRes.data ?? []).map((row) => [row.badge_id, row.earned_at ?? ""]));
+  const rank = (id: string) => {
+    const index = (BADGE_IDS as readonly string[]).indexOf(id);
+    return index === -1 ? BADGE_IDS.length : index;
+  };
+
+  const badges = (catalogueRes.data ?? [])
+    .map((badge) => ({ ...badge, earned_at: earned.get(badge.id) ?? null }))
+    .sort((a, b) => rank(a.id) - rank(b.id) || a.name.localeCompare(b.name));
+
+  return { ok: true, badges };
 }

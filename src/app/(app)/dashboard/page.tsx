@@ -21,7 +21,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
   if (!data) redirect("/login");
 
-  const { name, learning, projects } = data;
+  const { name, learning, projects, badges } = data;
 
   return (
     <>
@@ -101,6 +101,42 @@ export default async function DashboardPage() {
               </p>
             )}
           </>
+        )}
+      </section>
+
+      <section className={dash.section}>
+        <div className={dash.sectionHeader}>
+          <h2 className={dash.sectionTitle}>
+            Badges
+            {badges.ok && badges.total > 0 ? (
+              <span className={dash.sectionCount}>
+                {" "}
+                {badges.earned.length} of {badges.total}
+              </span>
+            ) : null}
+          </h2>
+          <Link href="/profile#badges" className={dash.viewAll}>
+            All badges →
+          </Link>
+        </div>
+
+        {!badges.ok ? (
+          <p className={dash.empty}>Your badges could not be loaded right now. Please refresh.</p>
+        ) : badges.earned.length === 0 ? (
+          <p className={dash.empty}>
+            No badges yet — finish a quiz or plan a project to earn your first!
+          </p>
+        ) : (
+          <ul className={dash.badgeRow}>
+            {badges.earned.map((badge) => (
+              <li key={badge.id} className={dash.badge} title={badge.description}>
+                <span className={dash.badgeIcon} aria-hidden="true">
+                  {badge.icon || "🏅"}
+                </span>
+                <span className={dash.badgeName}>{badge.name}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

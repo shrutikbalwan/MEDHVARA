@@ -82,7 +82,7 @@ export function ProjectDetail({ project }: { project: Project }) {
     setDraft((prev) => ({ ...prev, [field]: value }));
   }
 
-  /** Refresh the page, carrying any new badges to the layout's popup. */
+  /** Refresh the page, carrying any new badges to the layout's toasts. */
   function showResult(newBadges: { id: string }[]) {
     if (newBadges.length > 0) {
       router.replace(`/projects/${project.id}${badgesQuery(newBadges)}`, { scroll: false });

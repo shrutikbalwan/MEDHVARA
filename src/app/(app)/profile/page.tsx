@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 
+import { BadgeGrid } from "@/components/badges/BadgeGrid";
+import { listBadgeShowcase } from "@/lib/badges";
+import { createClient } from "@/lib/supabase/server";
 import {
   getOwnProfile,
   getPhotoSignedUrl,
@@ -28,6 +31,35 @@ function Tags({ label, values }: { label: string; values: string[] }) {
   );
 }
 
+/** All badges, earned ones highlighted. Shown whether or not the profile is filled in. */
+async function BadgesSection() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const showcase = await listBadgeShowcase(user.id, supabase);
+  const earnedCount = showcase.ok
+    ? showcase.badges.filter((badge) => badge.earned_at !== null).length
+    : 0;
+
+  return (
+    <section id="badges" className={profileStyles.badges}>
+      <h2 className={profileStyles.detailLabel}>
+        Badges{showcase.ok ? ` · ${earnedCount} of ${showcase.badges.length}` : ""}
+      </h2>
+      {!showcase.ok ? (
+        <p className={styles.placeholder}>Badges could not be loaded right now.</p>
+      ) : showcase.badges.length === 0 ? (
+        <p className={styles.placeholder}>No badges have been set up yet.</p>
+      ) : (
+        <BadgeGrid badges={showcase.badges} />
+      )}
+    </section>
+  );
+}
+
 export default async function ProfilePage() {
   const profile = await getOwnProfile();
 
@@ -43,6 +75,7 @@ export default async function ProfilePage() {
         <Link href="/profile/edit" className={styles.back}>
           Fill in your profile →
         </Link>
+        <BadgesSection />
       </>
     );
   }
@@ -95,6 +128,7 @@ export default async function ProfilePage() {
       <Link href="/profile/edit" className={styles.back}>
         Edit profile →
       </Link>
+      <BadgesSection />
     </>
   );
 }

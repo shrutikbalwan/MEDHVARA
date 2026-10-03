@@ -1,0 +1,70 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 12px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.earned {
+  border: 1.5px solid color-mix(in srgb, #e3a008 60%, transparent);
+  background: color-mix(in srgb, #e3a008 10%, transparent);
+}
+
+.locked {
+  border: 1px dashed color-mix(in srgb, var(--foreground) 22%, transparent);
+}
+
+.icon {
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+/* Greyscale emoji + reduced opacity reads as "locked" in both themes. */
+.locked .icon {
+  filter: grayscale(1);
+  opacity: 0.35;
+}
+
+.name {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.locked .name {
+  opacity: 0.6;
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0.65;
+}
+
+.date,
+.status {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
