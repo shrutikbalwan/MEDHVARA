@@ -1,60 +1,136 @@
+/* ---- Header ------------------------------------------------------------ */
+
 .header {
   display: flex;
-  align-items: center;
-  gap: 18px;
+  align-items: flex-start;
+  gap: 22px;
+}
+
+.photo,
+.photoFallback {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
 }
 
 .photo {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
   object-fit: cover;
   border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
 }
 
 .photoFallback {
-  width: 88px;
-  height: 88px;
-  flex: none;
   display: grid;
   place-items: center;
-  border-radius: 50%;
   background: color-mix(in srgb, var(--foreground) 10%, transparent);
-  font-size: 32px;
+  font-size: 36px;
   font-weight: 600;
 }
 
-.username {
-  margin: 6px 0 0;
-  font-size: 14px;
-  opacity: 0.6;
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 
 .meta {
-  margin: 6px 0 0;
+  margin: 0;
   font-size: 15px;
   opacity: 0.7;
 }
 
 .bio {
-  margin: 28px 0 0;
+  margin: 6px 0 0;
   font-size: 15px;
   line-height: 1.65;
   white-space: pre-wrap;
 }
 
-.detail {
-  margin-top: 26px;
+.nudge {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.75;
 }
 
-.detailLabel {
-  margin: 0 0 10px;
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.editButton {
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.editButton:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+@media (max-width: 480px) {
+  .header {
+    flex-direction: column;
+  }
+}
+
+/* ---- Sections ---------------------------------------------------------- */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
+  /* Breathing room above the heading when jumped to via /profile#badges. */
+  scroll-margin-top: 24px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.subTitle {
+  margin: 6px 0 0;
   font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   opacity: 0.55;
 }
+
+.count {
+  font-size: 14px;
+  font-weight: 400;
+  opacity: 0.6;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.inlineLink {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Skills ------------------------------------------------------------ */
 
 .tags {
   display: flex;
@@ -66,16 +142,162 @@
 }
 
 .tag {
-  padding: 5px 11px;
-  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  padding: 5px 12px;
   border-radius: 999px;
+  background: color-mix(in srgb, #2f6feb 14%, transparent);
   font-size: 14px;
 }
 
-.badges {
-  margin-top: 40px;
-  padding-top: 24px;
-  border-top: 1px solid color-mix(in srgb, var(--foreground) 12%, transparent);
-  /* Breathing room above the heading when jumped to via /profile#badges. */
-  scroll-margin-top: 24px;
+/* ---- Stats ------------------------------------------------------------- */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 0;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: 12px;
+}
+
+.stat dt {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.stat dd {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .stat {
+    padding: 12px;
+  }
+
+  .stat dd {
+    font-size: 22px;
+  }
+}
+
+/* ---- Badges ------------------------------------------------------------ */
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 96px;
+  padding: 12px 6px;
+  border: 1.5px solid color-mix(in srgb, #e3a008 60%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, #e3a008 10%, transparent);
+  text-align: center;
+}
+
+.badgeIcon {
+  font-size: 28px;
+  line-height: 1.1;
+}
+
+.badgeName {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.locked summary {
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.locked[open] summary {
+  margin-bottom: 12px;
+}
+
+/* ---- Projects ---------------------------------------------------------- */
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.project {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: 12px;
+}
+
+.project:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.projectTitle {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.pills {
+  flex: none;
+  display: flex;
+  gap: 6px;
+}
+
+.status,
+.difficulty {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status {
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+}
+
+.difficulty {
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  opacity: 0.8;
+}
+
+/* ---- Public view ------------------------------------------------------- */
+
+.ownerBanner {
+  margin: 0 0 24px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #2f6feb 12%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.projectStatic:hover {
+  background: none;
 }

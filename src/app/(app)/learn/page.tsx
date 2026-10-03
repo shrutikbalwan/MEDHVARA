@@ -65,7 +65,7 @@ export default async function LearnPage() {
                           </span>
                         ) : null}
                       </span>
-                      {topic.completed && topic.quiz_score !== null ? (
+                      {topic.completed && topic.quiz_score != null ? (
                         <span className={learnStyles.score}>{topic.quiz_score}/{LESSON_QUIZ_LENGTH}</span>
                       ) : null}
                     </Link>

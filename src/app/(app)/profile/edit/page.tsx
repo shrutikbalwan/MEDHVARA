@@ -17,7 +17,9 @@ export default async function EditProfilePage() {
         {profile ? "Edit your profile" : "Create your profile"}
       </h1>
       <p className={styles.lede}>
-        Only you can see or change this. Everything except your name is optional.
+        Your name, college, branch, year, skills, interests, bio, and photo appear
+        on your shareable profile, which any signed-in student can view. Only you
+        can change them. Everything except your name is optional.
       </p>
 
       <ProfileForm profile={profile} />

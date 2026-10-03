@@ -1,0 +1,15 @@
+.button {
+  padding: 7px 14px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
