@@ -1,0 +1,120 @@
+.toggle {
+  align-self: flex-start;
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.toggle:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 16%, transparent);
+  border-radius: 12px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: color-mix(in srgb, var(--foreground) 8%, transparent);
+}
+
+.hint {
+  margin: -4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.input {
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+  border-radius: 8px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.primary {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 9px;
+  background: var(--foreground);
+  color: var(--background);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: #c62a2f;
+}
+
+@media (prefers-color-scheme: dark) {
+  .error {
+    color: #ff9592;
+  }
+}

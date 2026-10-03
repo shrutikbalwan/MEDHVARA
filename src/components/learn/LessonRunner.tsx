@@ -3,6 +3,8 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { checkAnswer, parseAnswer, type NumericInstance } from "@/lib/quiz/engine";
+import { pickComputedQuestion } from "@/lib/quiz/pick";
 import { saveTopicProgress } from "@/lib/supabase/learn-actions";
 import { badgesQuery } from "@/types/badge";
 import {
@@ -20,11 +22,14 @@ export function LessonRunner({
   topicId,
   title,
   subject,
+  description,
   previousScore,
 }: {
   topicId: string;
   title: string;
   subject: string;
+  /** Helps pick a computed question when the title alone is vague. */
+  description: string | null;
   /** Score from an earlier attempt, or null if the topic is not completed. */
   previousScore: number | null;
 }) {
@@ -36,6 +41,13 @@ export function LessonRunner({
 
   /** Chosen option text per question index. */
   const [answers, setAnswers] = useState<Record<number, string>>({});
+  /**
+   * A question with a computed answer key and fresh numbers each attempt,
+   * when one fits this topic. It replaces the AI's last question, so the quiz
+   * stays 3 questions long and the score keeps its 0–3 range.
+   */
+  const [computed, setComputed] = useState<NumericInstance | null>(null);
+  const [numericAnswer, setNumericAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -51,6 +63,8 @@ export function LessonRunner({
     setError(null);
     setLesson(null);
     setAnswers({});
+    setComputed(null);
+    setNumericAnswer("");
     setSubmitted(false);
     setSaveState("idle");
     setSaveError(null);
@@ -69,6 +83,9 @@ export function LessonRunner({
         return;
       }
       setLesson(payload.lesson as Lesson);
+      // A random seed per attempt: new numbers every time.
+      const seed = crypto.getRandomValues(new Uint32Array(1))[0];
+      setComputed(pickComputedQuestion({ title, description }, seed));
     } catch {
       setError("Could not reach the server. Check your connection and try again.");
     } finally {
@@ -105,9 +122,17 @@ export function LessonRunner({
     });
   }
 
-  const quiz = lesson?.quiz ?? [];
-  const allAnswered = quiz.length > 0 && quiz.every((_, index) => answers[index]);
-  const score = quiz.filter((q, index) => answers[index] === q.correct_answer).length;
+  const quiz = (lesson?.quiz ?? []).slice(0, computed ? LESSON_QUIZ_LENGTH - 1 : LESSON_QUIZ_LENGTH);
+  const numericParsed = parseAnswer(numericAnswer);
+  const numericResult = computed && numericAnswer.trim() ? checkAnswer(computed, numericAnswer) : null;
+  const allAnswered =
+    quiz.length > 0 &&
+    quiz.every((_, index) => answers[index]) &&
+    (!computed || numericParsed !== null);
+  const score =
+    quiz.filter((q, index) => answers[index] === q.correct_answer).length +
+    (numericResult?.correct ? 1 : 0);
+  const totalQuestions = quiz.length + (computed ? 1 : 0);
 
   function submitQuiz() {
     if (!allAnswered || submitted) return;
@@ -218,6 +243,43 @@ export function LessonRunner({
                   </fieldset>
                 </li>
               ))}
+
+              {computed ? (
+                <li>
+                  <fieldset className={styles.options} disabled={submitted}>
+                    <legend className={styles.questionText}>
+                      {quiz.length + 1}. {computed.prompt}
+                    </legend>
+                    <p className={styles.exactNote}>
+                      🧮 Exact answer, calculated by MEDHVARA — the numbers change every attempt.
+                    </p>
+                    <div className={styles.numericRow}>
+                      <input
+                        className={`${styles.numericInput} ${
+                          submitted && numericResult ? (numericResult.correct ? styles.correct : styles.wrong) : ""
+                        }`}
+                        value={numericAnswer}
+                        onChange={(event) => setNumericAnswer(event.target.value)}
+                        placeholder={computed.unit ? `e.g. 4.7k (in ${computed.unit})` : "e.g. 42"}
+                        aria-label={`Your answer${computed.unit ? ` in ${computed.unit}` : ""}`}
+                        inputMode="text"
+                        autoComplete="off"
+                        spellCheck={false}
+                      />
+                      {computed.unit ? <span className={styles.unit}>{computed.unit}</span> : null}
+                    </div>
+                    {!submitted && numericAnswer.trim() && numericParsed === null ? (
+                      <p className={styles.numericHint}>Enter a number such as 150, 4.7k, 0.02 or 2.2µ.</p>
+                    ) : null}
+                    {submitted && numericResult ? (
+                      <div className={styles.numericFeedback}>
+                        <strong>{numericResult.correct ? "✓ Correct" : `✗ The answer is ${numericResult.expected}`}</strong>
+                        {numericResult.explanation ? <span>{numericResult.explanation}</span> : null}
+                      </div>
+                    ) : null}
+                  </fieldset>
+                </li>
+              ) : null}
             </ol>
 
             {!submitted ? (
@@ -232,7 +294,7 @@ export function LessonRunner({
             ) : (
               <div className={styles.result} role="status">
                 <p className={styles.score}>
-                  You scored {score} out of {quiz.length}.
+                  You scored {score} out of {totalQuestions}.
                 </p>
                 {saveState === "saving" ? (
                   <p className={styles.saveNote}>Saving your progress…</p>

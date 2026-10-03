@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { ProjectDetail } from "@/components/projects/ProjectDetail";
+import { getOwnProfile } from "@/lib/supabase/profile";
 import { getProject } from "@/lib/supabase/projects";
 
 import styles from "../../app.module.css";
@@ -33,7 +34,24 @@ export default async function ProjectPage({ params }: PageProps) {
         ← All projects
       </Link>
       <h1 className={styles.title}>{project.title}</h1>
-      <ProjectDetail project={project} />
+      <ProjectDetail project={project} reportDefaults={await reportDefaults()} />
     </>
   );
+}
+
+/**
+ * Prefill for the PDF report form. Optional: if the profile cannot be read,
+ * the project page still renders and the student types the details.
+ */
+async function reportDefaults() {
+  try {
+    const profile = await getOwnProfile();
+    return {
+      name: profile?.name?.trim() ?? "",
+      institute: profile?.college?.trim() ?? "",
+      department: profile?.branch?.trim() ? `Department of ${profile.branch.trim()}` : "",
+    };
+  } catch {
+    return { name: "", institute: "", department: "" };
+  }
 }

@@ -9,6 +9,7 @@ import {
   updateProjectStatus,
 } from "@/lib/supabase/project-actions";
 import { badgesQuery } from "@/types/badge";
+import { ProjectReport } from "@/components/projects/ProjectReport";
 import { PROJECT_STATUSES } from "@/types/project";
 import type { Project } from "@/types/project";
 import { DIFFICULTIES } from "@/types/project-plan";
@@ -66,7 +67,14 @@ function List({ label, values }: { label: string; values: string[] | null }) {
   );
 }
 
-export function ProjectDetail({ project }: { project: Project }) {
+export function ProjectDetail({
+  project,
+  reportDefaults,
+}: {
+  project: Project;
+  /** Prefill for the PDF report form, from the student's profile. */
+  reportDefaults: { name: string; institute: string; department: string };
+}) {
   const router = useRouter();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -238,6 +246,8 @@ export function ProjectDetail({ project }: { project: Project }) {
           )}
         </div>
       </div>
+
+      {!isEditing ? <ProjectReport project={project} defaults={reportDefaults} /> : null}
 
       {error ? (
         <p className={styles.error} role="alert">
