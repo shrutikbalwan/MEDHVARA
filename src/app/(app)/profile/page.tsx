@@ -99,17 +99,22 @@ export default async function ProfilePage() {
         <h2 id="stats-title" className={p.sectionTitle}>
           Stats
         </h2>
-        {!stats.ok ? (
+        {stats.unavailable.length === 4 ? (
           <p className={p.empty}>Your stats could not be loaded right now.</p>
         ) : (
           <StatsRow
             stats={[
-              { label: "Topics completed", value: stats.topicsCompleted },
-              { label: "Quizzes taken", value: stats.quizzesTaken },
-              { label: "Projects created", value: stats.projectsCreated },
+              { label: "Topics completed", value: stats.topics_completed },
+              { label: "Quizzes taken", value: stats.quizzes_taken },
+              { label: "Projects created", value: stats.projects_created },
+              { label: "Projects completed", value: stats.projects_completed },
+              { label: "🔥 Day streak", value: stats.current_streak },
             ]}
           />
         )}
+        {stats.unavailable.length > 0 && stats.unavailable.length < 4 ? (
+          <p className={p.statsNote}>Some numbers could not be loaded and show as 0 for now.</p>
+        ) : null}
       </section>
 
       {/* 4. Badges */}

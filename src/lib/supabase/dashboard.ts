@@ -1,3 +1,4 @@
+import { getCurrentStreak } from "@/lib/activity";
 import { listBadgeShowcase, type BadgeStatus } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -20,6 +21,8 @@ export type DashboardData = {
       }
     | { ok: false };
   projects: { ok: true; recent: ProjectCard[] } | { ok: false };
+  /** Consecutive active days, or null if activity_log could not be read. */
+  streak: number | null;
   /** Earned badges only, oldest first, plus the catalogue size for "X of Y". */
   badges: { ok: true; earned: BadgeStatus[]; total: number } | { ok: false };
 };
@@ -39,7 +42,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [profileResult, topicsResult, progressResult, projectsResult, showcase] = await Promise.all([
+  const [profileResult, topicsResult, progressResult, projectsResult, showcase, streakResult] = await Promise.all([
     // limit(1) rather than maybeSingle(): user_id is not guaranteed unique.
     supabase.from("profiles").select("name").eq("user_id", user.id).limit(1),
     supabase
@@ -63,6 +66,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .limit(RECENT_PROJECTS)
       .returns<ProjectCard[]>(),
     listBadgeShowcase(user.id, supabase),
+    // Logs its own failure; the page then simply hides the streak line.
+    getCurrentStreak(user.id, supabase),
   ]);
 
   // Name: a read failure just means a nameless greeting.
@@ -123,7 +128,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     learning: learning.ok ? `${learning.completed}/${learning.total}` : "error",
     projects: projects.ok ? projects.recent.length : "error",
     badges: badges.ok ? badges.earned.length : "error",
+    streak: streakResult.ok ? streakResult.streak : "error",
   });
 
-  return { name, learning, projects, badges };
+  return { name, learning, projects, badges, streak: streakResult.ok ? streakResult.streak : null };
 }

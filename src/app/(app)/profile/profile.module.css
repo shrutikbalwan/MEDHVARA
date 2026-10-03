@@ -152,7 +152,8 @@
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  /* Five tiles: one row on a laptop, wrapping to two per row on a phone. */
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 10px;
   margin: 0;
 }
@@ -160,6 +161,9 @@
 .stat {
   display: flex;
   flex-direction: column-reverse;
+  /* With column-reverse, flex-end is the top: numbers line up even when a
+     label wraps onto two lines. */
+  justify-content: flex-end;
   gap: 2px;
   padding: 14px 16px;
   border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
@@ -300,4 +304,10 @@
 
 .projectStatic:hover {
   background: none;
+}
+
+.statsNote {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.6;
 }
