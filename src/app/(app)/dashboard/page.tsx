@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
   if (!data) redirect("/login");
 
-  const { name, learning, projects, badges } = data;
+  const { name, learning, projects, badges, streak } = data;
 
   return (
     <>
@@ -59,6 +59,24 @@ export default async function DashboardPage() {
           so MEDHVARA knows what to call you.
         </p>
       )}
+
+      {/* Opening the dashboard logs today, so a working streak is at least 1;
+          null means activity_log is unavailable, and the line is hidden. */}
+      {streak !== null && streak > 0 ? (
+        <p className={dash.streak}>
+          <span aria-hidden="true">🔥</span>{" "}
+          {streak === 1 ? (
+            <>
+              <strong>Day 1</strong> — come back tomorrow to start a streak.
+            </>
+          ) : (
+            <>
+              <strong>{streak}-day streak</strong>
+              {streak >= 7 ? " — amazing consistency!" : " — keep it going!"}
+            </>
+          )}
+        </p>
+      ) : null}
 
       <div className={dash.actions}>
         <Link href="/chat" className={dash.primary}>
