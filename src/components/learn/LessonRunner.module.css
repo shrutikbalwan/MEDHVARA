@@ -211,3 +211,58 @@
     color: #ffc971;
   }
 }
+
+/* ---- Computed (numeric) question ------------------------------------- */
+
+.exactNote {
+  margin: -4px 0 4px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.numericRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.numericInput {
+  width: min(100%, 260px);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 9px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+}
+
+.numericInput:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.unit {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.numericHint {
+  margin: 0;
+  font-size: 12px;
+  color: #9a5b00;
+}
+
+.numericFeedback {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+@media (prefers-color-scheme: dark) {
+  .numericHint {
+    color: #ffc971;
+  }
+}

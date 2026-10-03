@@ -37,6 +37,7 @@ export default async function TopicPage({ params }: PageProps) {
         topicId={topic.id}
         title={topic.title}
         subject={topic.subject}
+        description={topic.description}
         previousScore={topic.completed ? topic.quiz_score : null}
       />
     </>
