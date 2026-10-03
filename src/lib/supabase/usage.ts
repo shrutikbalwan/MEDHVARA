@@ -1,24 +1,9 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
+import { logStage, logStageError } from "@/lib/log";
 import type { createClient } from "@/lib/supabase/server";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
-
-/**
- * Logs every field PostgREST gives us. `error.message` alone frequently omits
- * the useful part — `code` and `details` are what identify a missing column, a
- * missing function, or an RLS refusal.
- */
-export function logSupabaseError(context: string, error: PostgrestError | null) {
-  if (!error) return;
-  console.error(
-    `[supabase] ${context}\n` +
-      `  code:    ${error.code ?? "(none)"}\n` +
-      `  message: ${error.message}\n` +
-      `  details: ${error.details ?? "(none)"}\n` +
-      `  hint:    ${error.hint ?? "(none)"}`,
-  );
-}
 
 /** Today's date as YYYY-MM-DD in UTC, matching a Postgres `date` column. */
 export function usageDateToday(): string {
@@ -28,7 +13,12 @@ export function usageDateToday(): string {
 export type ReserveResult =
   | { ok: true; allowed: true; used: number }
   | { ok: true; allowed: false; used: number }
-  | { ok: false; error: PostgrestError | { code: string; message: string } };
+  | {
+      ok: false;
+      /** Which step failed, e.g. "daily_usage.insert" — returned so callers can report it. */
+      stage: string;
+      error: PostgrestError | { code: string; message: string };
+    };
 
 const MAX_ATTEMPTS = 3;
 
@@ -60,8 +50,8 @@ export async function reserveDailySlot(
       .maybeSingle<{ message_count: number }>();
 
     if (readError) {
-      logSupabaseError("daily_usage read failed", readError);
-      return { ok: false, error: readError };
+      logStageError("usage", "daily_usage.read", readError, { userId, usageDate, attempt });
+      return { ok: false, stage: "daily_usage.read", error: readError };
     }
 
     // First message today: create the row.
@@ -70,17 +60,24 @@ export async function reserveDailySlot(
         .from("daily_usage")
         .insert({ user_id: userId, usage_date: usageDate, message_count: 1 });
 
-      if (!insertError) return { ok: true, allowed: true, used: 1 };
+      if (!insertError) {
+        logStage("usage", "daily_usage.insert", { userId, usageDate, used: 1 });
+        return { ok: true, allowed: true, used: 1 };
+      }
 
       // 23505 = unique_violation: a concurrent request inserted first. Re-read
       // and take the increment path instead.
-      if (insertError.code === "23505") continue;
+      if (insertError.code === "23505") {
+        logStage("usage", "daily_usage.insert-raced", { userId, attempt });
+        continue;
+      }
 
-      logSupabaseError("daily_usage insert failed", insertError);
-      return { ok: false, error: insertError };
+      logStageError("usage", "daily_usage.insert", insertError, { userId, usageDate });
+      return { ok: false, stage: "daily_usage.insert", error: insertError };
     }
 
     if (row.message_count >= limit) {
+      logStage("usage", "daily_usage.limit-reached", { userId, used: row.message_count, limit });
       return { ok: true, allowed: false, used: row.message_count };
     }
 
@@ -95,20 +92,27 @@ export async function reserveDailySlot(
       .maybeSingle<{ message_count: number }>();
 
     if (updateError) {
-      logSupabaseError("daily_usage increment failed", updateError);
-      return { ok: false, error: updateError };
+      logStageError("usage", "daily_usage.increment", updateError, { userId, usageDate });
+      return { ok: false, stage: "daily_usage.increment", error: updateError };
     }
 
-    if (updated) return { ok: true, allowed: true, used: updated.message_count };
-    // Zero rows matched — someone else incremented first. Retry.
+    if (updated) {
+      logStage("usage", "daily_usage.increment", { userId, used: updated.message_count });
+      return { ok: true, allowed: true, used: updated.message_count };
+    }
+    // Zero rows matched — someone else incremented first, or RLS has no update
+    // policy (which also matches zero rows rather than erroring). Retry.
+    logStage("usage", "daily_usage.increment-raced", { userId, attempt });
   }
 
   const error = {
     code: "RESERVE_RETRY_EXHAUSTED",
     message: `Could not reserve a message slot after ${MAX_ATTEMPTS} attempts`,
   };
-  console.error(`[usage] ${error.message} for user ${userId}`);
-  return { ok: false, error };
+  // Persistent zero-row updates with no concurrent traffic point at a missing
+  // UPDATE policy on daily_usage, not at contention.
+  logStageError("usage", "daily_usage.retry-exhausted", error, { userId });
+  return { ok: false, stage: "daily_usage.retry-exhausted", error };
 }
 
 /**
@@ -130,7 +134,7 @@ export async function releaseDailySlot(
     .maybeSingle<{ message_count: number }>();
 
   if (readError) {
-    logSupabaseError("daily_usage release read failed", readError);
+    logStageError("usage", "daily_usage.release-read", readError, { userId });
     return;
   }
   if (!row || row.message_count <= 0) return;
@@ -142,5 +146,9 @@ export async function releaseDailySlot(
     .eq("usage_date", usageDate)
     .eq("message_count", row.message_count);
 
-  if (updateError) logSupabaseError("daily_usage release failed", updateError);
+  if (updateError) {
+    logStageError("usage", "daily_usage.release", updateError, { userId });
+    return;
+  }
+  logStage("usage", "daily_usage.release", { userId, used: row.message_count - 1 });
 }

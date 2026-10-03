@@ -1,5 +1,5 @@
+import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { logSupabaseError } from "@/lib/supabase/usage";
 import type { Project, ProjectCard } from "@/types/project";
 
 export type ProjectListResult = {
@@ -31,10 +31,11 @@ export async function listProjects(): Promise<ProjectListResult> {
     .returns<ProjectCard[]>();
 
   if (error) {
-    logSupabaseError("projects list failed", error);
+    logStageError("projects", "list", error, { userId: user.id });
     return { projects: [], error: error.message };
   }
 
+  logStage("projects", "list", { userId: user.id, count: data?.length ?? 0 });
   return { projects: data ?? [], error: null };
 }
 
@@ -59,9 +60,11 @@ export async function getProject(id: string): Promise<Project | null> {
     .maybeSingle<Project>();
 
   if (error) {
-    logSupabaseError("project read failed", error);
+    logStageError("projects", "read", error, { id, userId: user.id });
     return null;
   }
 
+  // Null with no error: a wrong id, or someone else's project hidden by RLS.
+  if (!data) logStage("projects", "read.not-found", { id, userId: user.id });
   return data;
 }

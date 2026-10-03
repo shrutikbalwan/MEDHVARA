@@ -144,6 +144,14 @@ export function ProjectDetail({ project }: { project: Project }) {
             onChange={(event) => changeStatus(event.target.value)}
             disabled={isPending}
           >
+            {/* With no status stored, the browser would otherwise display
+                "Idea" while the database holds nothing — and picking Idea would
+                fire no change. */}
+            {!status ? (
+              <option value="" disabled>
+                Not set
+              </option>
+            ) : null}
             {/* A value written before these five existed would otherwise vanish
                 from the dropdown and look like data loss. */}
             {status && !PROJECT_STATUSES.includes(status as never) ? (
@@ -185,7 +193,12 @@ export function ProjectDetail({ project }: { project: Project }) {
             <button
               type="button"
               className={styles.secondary}
-              onClick={() => setIsEditing(true)}
+              onClick={() => {
+                // Start from the saved row, not a draft left over from the last
+                // edit — the server trims and cleans what it stores.
+                setDraft(draftFrom(project));
+                setIsEditing(true);
+              }}
             >
               Edit
             </button>

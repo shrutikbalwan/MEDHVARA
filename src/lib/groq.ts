@@ -1,4 +1,5 @@
 import { getGroqApiKey } from "@/config/env.server";
+import { logStageError } from "@/lib/log";
 
 const GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const DEFAULT_MODEL = "llama-3.3-70b-versatile";
@@ -67,6 +68,7 @@ export async function createChatCompletion(
     });
   } catch (error) {
     const timedOut = error instanceof Error && error.name === "TimeoutError";
+    logStageError("groq", timedOut ? "request.timeout" : "request.network", error, { model });
     throw new GroqError(
       timedOut ? "The AI request timed out." : "Could not reach the AI service.",
       504,
@@ -78,7 +80,12 @@ export async function createChatCompletion(
     // Body is read for logging only. It can quote the request and is never
     // returned to the browser verbatim.
     const detail = await response.text().catch(() => "");
-    console.error(`Groq request failed: ${response.status} ${detail.slice(0, 500)}`);
+    logStageError(
+      "groq",
+      "request.http",
+      { code: String(response.status), message: detail.slice(0, 500) },
+      { model },
+    );
 
     if (response.status === 429) {
       throw new GroqError("The AI service is rate limited right now.", 429, true);
@@ -93,7 +100,8 @@ export async function createChatCompletion(
   let payload: unknown;
   try {
     payload = await response.json();
-  } catch {
+  } catch (error) {
+    logStageError("groq", "response.parse", error, { model });
     throw new GroqError("The AI service returned an unreadable response.", 502, true);
   }
 
@@ -101,6 +109,7 @@ export async function createChatCompletion(
     ?.choices?.[0]?.message?.content;
 
   if (typeof content !== "string" || content.trim().length === 0) {
+    logStageError("groq", "response.empty", { message: "no choices[0].message.content" }, { model });
     throw new GroqError("The AI service returned an empty response.", 502, true);
   }
 

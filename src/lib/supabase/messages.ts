@@ -1,3 +1,4 @@
+import { logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
 export type ChatMessageRow = {
@@ -43,7 +44,7 @@ export async function getChatHistory(): Promise<ChatHistory> {
     .returns<ChatMessageRow[]>();
 
   if (error) {
-    console.error("Could not load chat history:", error);
+    logStageError("chat", "history.page-load", error, { userId: user.id });
     return { messages: [], error: error.message };
   }
 
