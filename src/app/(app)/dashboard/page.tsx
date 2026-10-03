@@ -26,6 +26,11 @@ export default async function DashboardPage() {
           <p className={styles.cardBody}>Start or continue a conversation.</p>
         </Link>
 
+        <Link href="/learn" className={styles.card}>
+          <h2 className={styles.cardTitle}>Learn</h2>
+          <p className={styles.cardBody}>Short lessons with a quiz, topic by topic.</p>
+        </Link>
+
         <Link href="/projects" className={styles.card}>
           <h2 className={styles.cardTitle}>Projects</h2>
           <p className={styles.cardBody}>Organise your work into projects.</p>
