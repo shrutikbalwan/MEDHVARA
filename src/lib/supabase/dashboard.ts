@@ -1,3 +1,4 @@
+import { listBadgeShowcase, type BadgeStatus } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import type { ProjectCard } from "@/types/project";
@@ -19,6 +20,8 @@ export type DashboardData = {
       }
     | { ok: false };
   projects: { ok: true; recent: ProjectCard[] } | { ok: false };
+  /** Earned badges only, oldest first, plus the catalogue size for "X of Y". */
+  badges: { ok: true; earned: BadgeStatus[]; total: number } | { ok: false };
 };
 
 const RECENT_PROJECTS = 3;
@@ -36,7 +39,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [profileResult, topicsResult, progressResult, projectsResult] = await Promise.all([
+  const [profileResult, topicsResult, progressResult, projectsResult, showcase] = await Promise.all([
     // limit(1) rather than maybeSingle(): user_id is not guaranteed unique.
     supabase.from("profiles").select("name").eq("user_id", user.id).limit(1),
     supabase
@@ -59,6 +62,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .order("created_at", { ascending: false })
       .limit(RECENT_PROJECTS)
       .returns<ProjectCard[]>(),
+    listBadgeShowcase(user.id, supabase),
   ]);
 
   // Name: a read failure just means a nameless greeting.
@@ -102,12 +106,24 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     projects = { ok: true, recent: projectsResult.data ?? [] };
   }
 
+  // listBadgeShowcase logs its own failure.
+  const badges: DashboardData["badges"] = showcase.ok
+    ? {
+        ok: true,
+        earned: showcase.badges
+          .filter((badge) => badge.earned_at !== null)
+          .sort((a, b) => (a.earned_at ?? "").localeCompare(b.earned_at ?? "")),
+        total: showcase.badges.length,
+      }
+    : { ok: false };
+
   logStage("dashboard", "load", {
     userId: user.id,
     hasName: Boolean(name),
     learning: learning.ok ? `${learning.completed}/${learning.total}` : "error",
     projects: projects.ok ? projects.recent.length : "error",
+    badges: badges.ok ? badges.earned.length : "error",
   });
 
-  return { name, learning, projects };
+  return { name, learning, projects, badges };
 }

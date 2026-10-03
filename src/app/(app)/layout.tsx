@@ -1,8 +1,9 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { BadgeToasts } from "@/components/badges/BadgeToasts";
 import { AppNav } from "@/components/nav/AppNav";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,6 +46,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </div>
       </header>
       <main className={styles.main}>{children}</main>
+      {/* useSearchParams needs a Suspense boundary. */}
+      <Suspense fallback={null}>
+        <BadgeToasts />
+      </Suspense>
     </div>
   );
 }
