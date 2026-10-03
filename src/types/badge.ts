@@ -15,6 +15,7 @@ export const BADGE_IDS = [
   "project_builder",
   "project_finisher",
   "streak_7",
+  "challenge_7",
 ] as const;
 
 export type BadgeId = (typeof BADGE_IDS)[number];

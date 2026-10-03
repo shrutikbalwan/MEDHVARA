@@ -55,6 +55,28 @@ test("streak_7 needs seven consecutive days", async () => {
   assert.deepEqual(await ids(client), ["streak_7"]);
 });
 
+test("challenge_7 needs seven correct Daily Challenges", async () => {
+  const { db, client } = fakeSupabase({
+    badges: catalogue,
+    daily_challenge_attempts: [
+      ...[1, 2, 3, 4, 5, 6].map((n) => ({ user_id: U, challenge_date: daysAgo(n * 3), correct: true })),
+      { user_id: U, challenge_date: daysAgo(30), correct: false },
+      { user_id: "someone-else", challenge_date: daysAgo(1), correct: true },
+    ],
+  });
+  assert.deepEqual(await ids(client), []);
+  db.daily_challenge_attempts.push({ user_id: U, challenge_date: daysAgo(40), correct: true });
+  assert.deepEqual(await ids(client), ["challenge_7"]);
+});
+
+test("a missing challenge table only skips challenge_7", async () => {
+  const { client } = fakeSupabase(
+    { badges: catalogue, projects: [{ owner_id: U, status: null }] },
+    ["daily_challenge_attempts"],
+  );
+  assert.deepEqual(await ids(client), ["first_project"]);
+});
+
 test("a badge missing from the catalogue is skipped, not fatal", async () => {
   const { client } = fakeSupabase({
     badges: catalogue.filter((b) => b.id !== "first_project"),
