@@ -34,3 +34,16 @@ select column_name, data_type, is_nullable, column_default
 from information_schema.columns
 where table_schema = 'public' and table_name = 'profiles'
 order by ordinal_position;
+
+-- 5. Projects: constraints and policies. A check constraint on status must
+--    allow exactly Idea, Planning, Building, Testing, Completed, or status
+--    changes fail with 23514. All four of select/insert/update/delete policies
+--    must exist, or that action silently matches zero rows.
+select conname, pg_get_constraintdef(oid) as definition
+from pg_constraint
+where conrelid = 'public.projects'::regclass and contype in ('c', 'f');
+
+select policyname, cmd, roles, qual, with_check
+from pg_policies
+where schemaname = 'public' and tablename = 'projects'
+order by cmd;

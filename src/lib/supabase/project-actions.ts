@@ -120,8 +120,21 @@ function describeWriteError(error: {
   if (error.code === "42501") {
     return "The database refused the change (row-level security). Check the projects policies in 0004_projects_plan_columns.sql.";
   }
+  // 23514 = check_violation: a status or difficulty value the table's own
+  // constraint does not allow.
+  if (error.code === "23514") {
+    return "The database rejected one of the values (check constraint on status or difficulty).";
+  }
   return "Could not save the change. Please try again.";
 }
+
+/**
+ * PostgREST reports success for an update or delete that matched no rows —
+ * which is exactly what an RLS refusal or a wrong id looks like. Without this
+ * check the UI says "saved" while nothing changed.
+ */
+const NO_ROWS_ERROR =
+  "That project was not changed: it does not exist, or the database did not let this account modify it.";
 
 export type ProjectMutationResult = { ok: true } | { ok: false; error: string };
 
@@ -149,15 +162,20 @@ export async function updateProjectStatus(
 
   // The owner_id filter is belt-and-braces next to the update policy: RLS
   // already restricts which rows can be targeted.
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("projects")
     .update({ status })
     .eq("id", id)
-    .eq("owner_id", user.id);
+    .eq("owner_id", user.id)
+    .select("id");
 
   if (error) {
     logSupabaseError("project status update failed", error);
     return { ok: false, error: describeWriteError(error) };
+  }
+  if (!data || data.length === 0) {
+    console.error(`[projects] status update matched 0 rows (id=${id}, user=${user.id})`);
+    return { ok: false, error: NO_ROWS_ERROR };
   }
 
   revalidatePath("/projects");
@@ -192,7 +210,7 @@ export async function updateProject(
     ? (input.status as ProjectStatus)
     : DEFAULT_PROJECT_STATUS;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("projects")
     .update({
       title,
@@ -207,11 +225,16 @@ export async function updateProject(
       status,
     })
     .eq("id", id)
-    .eq("owner_id", user.id);
+    .eq("owner_id", user.id)
+    .select("id");
 
   if (error) {
     logSupabaseError("project update failed", error);
     return { ok: false, error: describeWriteError(error) };
+  }
+  if (!data || data.length === 0) {
+    console.error(`[projects] update matched 0 rows (id=${id}, user=${user.id})`);
+    return { ok: false, error: NO_ROWS_ERROR };
   }
 
   revalidatePath("/projects");
@@ -230,15 +253,20 @@ export async function deleteProject(id: string): Promise<ProjectMutationResult> 
     return { ok: false, error: "You need to be signed in." };
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("projects")
     .delete()
     .eq("id", id)
-    .eq("owner_id", user.id);
+    .eq("owner_id", user.id)
+    .select("id");
 
   if (error) {
     logSupabaseError("project delete failed", error);
     return { ok: false, error: "Could not delete the project. Please try again." };
+  }
+  if (!data || data.length === 0) {
+    console.error(`[projects] delete matched 0 rows (id=${id}, user=${user.id})`);
+    return { ok: false, error: NO_ROWS_ERROR };
   }
 
   revalidatePath("/projects");
