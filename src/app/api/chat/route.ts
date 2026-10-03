@@ -1,18 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import {
-  CHAT_HISTORY_TURNS,
-  CHAT_SYSTEM_PROMPT,
-  DAILY_MESSAGE_LIMIT,
-} from "@/config/prompts";
+import { CHAT_HISTORY_TURNS, CHAT_SYSTEM_PROMPT } from "@/config/prompts";
+import { claimDailyMessage } from "@/lib/daily-quota";
 import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
-import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
-import {
-  logSupabaseError,
-  releaseDailySlot,
-  reserveDailySlot,
-} from "@/lib/supabase/usage";
+import { logSupabaseError } from "@/lib/supabase/usage";
 
 /** Route handlers are uncached for POST, but be explicit about it. */
 export const dynamic = "force-dynamic";
@@ -57,43 +49,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3a. A brand-new account has no profiles row, and the usage and message
-  //     tables reference profiles. Create a bare row first. Non-fatal: if it
-  //     fails, the quota step below logs the real cause.
-  await ensureProfileRow(supabase, user.id);
-
-  // 3. Quota. Reserved BEFORE the AI call: reads today's row, inserts it with
-  //    count 1 if this is the first message of the day, otherwise increments.
-  //    Released further down if the AI call fails.
-  const reservation = await reserveDailySlot(
-    supabase,
-    user.id,
-    DAILY_MESSAGE_LIMIT,
-  );
-
-  if (!reservation.ok) {
-    // The exact Postgres code/message/details/hint are already on the server
-    // console via logSupabaseError. The client gets a generic sentence, since
-    // database internals are not the user's business.
-    return NextResponse.json(
-      { error: "Could not check your daily usage. Please try again." },
-      { status: 500 },
-    );
-  }
-
-  if (!reservation.allowed) {
-    return NextResponse.json(
-      {
-        error: `You have reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages. Please try again tomorrow.`,
-        limit: DAILY_MESSAGE_LIMIT,
-        used: reservation.used,
-      },
-      { status: 429 },
-    );
-  }
-
-  const reserved = reservation.used;
-  const releaseQuota = () => releaseDailySlot(supabase, user.id);
+  // 3. Quota — shared with /api/project-builder. Reserved BEFORE the AI call
+  //    and released further down if the AI call fails.
+  const quota = await claimDailyMessage(supabase, user.id);
+  if (!quota.ok) return quota.response;
 
   // 4. Persist the user's message. RLS enforces that user_id is our own; the
   //    explicit value here is what satisfies the insert policy.
@@ -103,7 +62,7 @@ export async function POST(request: NextRequest) {
 
   if (userInsertError) {
     logSupabaseError("messages insert (user) failed", userInsertError);
-    await releaseQuota();
+    await quota.release();
     return NextResponse.json(
       { error: "Could not save your message. Please try again." },
       { status: 500 },
@@ -133,7 +92,7 @@ export async function POST(request: NextRequest) {
   try {
     reply = await createChatCompletion(conversation);
   } catch (error) {
-    await releaseQuota();
+    await quota.release();
 
     if (error instanceof GroqError) {
       // error.message is written to be safe to show; upstream detail is logged,
@@ -162,12 +121,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       reply,
       warning: "Your reply was not saved to history.",
-      usage: { used: reserved as number, limit: DAILY_MESSAGE_LIMIT },
+      usage: { used: quota.used, limit: quota.limit },
     });
   }
 
   return NextResponse.json({
     reply,
-    usage: { used: reserved as number, limit: DAILY_MESSAGE_LIMIT },
+    usage: { used: quota.used, limit: quota.limit },
   });
 }

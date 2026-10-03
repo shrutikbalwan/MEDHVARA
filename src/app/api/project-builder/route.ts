@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { DAILY_MESSAGE_LIMIT, PROJECT_BUILDER_SYSTEM_PROMPT } from "@/config/prompts";
+import { PROJECT_BUILDER_SYSTEM_PROMPT } from "@/config/prompts";
+import { claimDailyMessage } from "@/lib/daily-quota";
 import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
 import { parseProjectPlan } from "@/lib/project-plan";
-import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
-import { releaseDailySlot, reserveDailySlot } from "@/lib/supabase/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -52,31 +51,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 3a. Same new-account guard as /api/chat: daily_usage references profiles.
-  await ensureProfileRow(supabase, user.id);
-
-  // 3. Quota — the same daily allowance as /api/chat, sharing one counter, so a
-  //    student cannot get 30 chats *and* 30 plans out of a 30-message budget.
-  const reservation = await reserveDailySlot(supabase, user.id, DAILY_MESSAGE_LIMIT);
-
-  if (!reservation.ok) {
-    // Exact Postgres code/message/details/hint already logged by the helper.
-    return NextResponse.json(
-      { error: "Could not check your daily usage. Please try again." },
-      { status: 500 },
-    );
-  }
-
-  if (!reservation.allowed) {
-    return NextResponse.json(
-      {
-        error: `You have reached your daily limit of ${DAILY_MESSAGE_LIMIT} messages. Please try again tomorrow.`,
-        limit: DAILY_MESSAGE_LIMIT,
-        used: reservation.used,
-      },
-      { status: 429 },
-    );
-  }
+  // 3. Quota — the same daily allowance as /api/chat, through the same helper.
+  const quota = await claimDailyMessage(supabase, user.id);
+  if (!quota.ok) return quota.response;
 
   // 4. Generate, validate, and retry once if the shape is wrong.
   const messages: ChatMessage[] = [
@@ -97,7 +74,7 @@ export async function POST(request: NextRequest) {
         maxTokens: 2048,
       });
     } catch (error) {
-      await releaseDailySlot(supabase, user.id);
+      await quota.release();
 
       if (error instanceof GroqError) {
         return NextResponse.json(
@@ -116,7 +93,7 @@ export async function POST(request: NextRequest) {
     if (result.ok) {
       return NextResponse.json({
         plan: result.plan,
-        usage: { used: reservation.used, limit: DAILY_MESSAGE_LIMIT },
+        usage: { used: quota.used, limit: quota.limit },
       });
     }
 
@@ -139,7 +116,7 @@ export async function POST(request: NextRequest) {
 
   // Both attempts produced unusable output — the user got nothing, so give the
   // slot back rather than charging them for it.
-  await releaseDailySlot(supabase, user.id);
+  await quota.release();
 
   return NextResponse.json(
     {
