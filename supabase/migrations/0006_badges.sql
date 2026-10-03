@@ -24,7 +24,7 @@ insert into public.badges (id, name, description, icon) values
   ('first_project',     'First Project',     'Planned your first project.',                      '💡'),
   ('project_builder',   'Project Builder',   'Planned three projects.',                          '🛠️'),
   ('project_finisher',  'Project Finisher',  'Marked a project as Completed.',                   '🏁'),
-  -- Placeholder: not awarded yet; needs daily login tracking.
+  -- Awarded from activity_log once 0008_activity_log.sql is run.
   ('streak_7',          '7-Day Streak',      'Learned on seven days in a row.',                  '🔥')
 on conflict (id) do nothing;
 

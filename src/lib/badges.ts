@@ -1,3 +1,4 @@
+import { getCurrentStreak } from "@/lib/activity";
 import { logStage, logStageError } from "@/lib/log";
 import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
@@ -14,10 +15,18 @@ type Facts = {
   completedSubjects: Set<string>;
   projectCount: number;
   hasCompletedProject: boolean;
+  /** Consecutive active days in activity_log. */
+  currentStreak: number;
 };
 
 /** Which fact sources loaded. A rule whose source failed is skipped, never guessed. */
-type Loaded = { profile: boolean; progress: boolean; subjects: boolean; projects: boolean };
+type Loaded = {
+  profile: boolean;
+  progress: boolean;
+  subjects: boolean;
+  projects: boolean;
+  activity: boolean;
+};
 
 const RULES: Record<BadgeId, { needs: (keyof Loaded)[]; earned: (f: Facts) => boolean }> = {
   first_profile: { needs: ["profile"], earned: (f) => f.hasName },
@@ -39,9 +48,8 @@ const RULES: Record<BadgeId, { needs: (keyof Loaded)[]; earned: (f: Facts) => bo
   first_project: { needs: ["projects"], earned: (f) => f.projectCount >= 1 },
   project_builder: { needs: ["projects"], earned: (f) => f.projectCount >= 3 },
   project_finisher: { needs: ["projects"], earned: (f) => f.hasCompletedProject },
-  // Placeholder: needs daily login/activity tracking, which does not exist yet.
-  // Never awarded until that data is available.
-  streak_7: { needs: [], earned: () => false },
+  // Active on 7 consecutive days (activity_log, see src/lib/activity.ts).
+  streak_7: { needs: ["activity"], earned: (f) => f.currentStreak >= 7 },
 };
 
 /**
@@ -62,7 +70,7 @@ export async function checkAndAwardBadges(
   try {
     const supabase = client ?? (await createClient());
 
-    const [profileRes, progressRes, projectsRes, ownedRes, catalogueRes] = await Promise.all([
+    const [profileRes, progressRes, projectsRes, ownedRes, catalogueRes, streak] = await Promise.all([
       // limit(1): user_id is not guaranteed unique on profiles.
       supabase.from("profiles").select("name").eq("user_id", userId).limit(1),
       supabase
@@ -85,6 +93,8 @@ export async function checkAndAwardBadges(
         .select("id, name, description, icon")
         .in("id", [...BADGE_IDS])
         .returns<Badge[]>(),
+      // Logs its own failure; on failure streak_7 is skipped, not guessed.
+      getCurrentStreak(userId, supabase),
     ]);
 
     // Without these two there is no safe way to know what is new.
@@ -102,6 +112,7 @@ export async function checkAndAwardBadges(
       progress: !progressRes.error,
       projects: !projectsRes.error,
       subjects: false,
+      activity: streak.ok,
     };
     if (profileRes.error) logStageError("badges", "profile.read", profileRes.error, { userId });
     if (progressRes.error) logStageError("badges", "progress.read", progressRes.error, { userId });
@@ -140,6 +151,7 @@ export async function checkAndAwardBadges(
       completedSubjects,
       projectCount: projects.length,
       hasCompletedProject: projects.some((p) => p.status === "Completed"),
+      currentStreak: streak.ok ? streak.streak : 0,
     };
 
     const owned = new Set((ownedRes.data ?? []).map((row) => row.badge_id));

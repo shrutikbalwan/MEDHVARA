@@ -2,7 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
+import { recordActivity } from "@/lib/activity";
+import { checkAndAwardBadges } from "@/lib/badges";
 import { getDashboardData } from "@/lib/supabase/dashboard";
+import { createClient } from "@/lib/supabase/server";
+import { badgesQuery } from "@/types/badge";
 
 import styles from "../app.module.css";
 import dash from "./dashboard.module.css";
@@ -18,6 +22,23 @@ export const dynamic = "force-dynamic";
  * the layout's check and this read, e.g. a session that expired in between.
  */
 export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Opening the dashboard counts as today's activity (once per day; repeat
+  // visits are no-ops). Neither call can throw or block the page.
+  await recordActivity(user.id, supabase);
+  // That visit can complete a 7-day streak, and existing students may already
+  // qualify for badges they have never been checked for. New ones are
+  // announced by the layout's BadgeToasts; the next load awards nothing new,
+  // so this redirect cannot loop. redirect() throws, so it stays outside any
+  // try/catch.
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  if (newBadges.length > 0) redirect(`/dashboard${badgesQuery(newBadges)}`);
+
   const data = await getDashboardData();
   if (!data) redirect("/login");
 

@@ -3,7 +3,7 @@ import type { BadgeStatus } from "@/lib/badges";
 import styles from "./BadgeGrid.module.css";
 
 /** Badges that exist in the catalogue but cannot be earned yet. */
-const COMING_SOON = new Set(["streak_7"]);
+const COMING_SOON = new Set<string>();
 
 /**
  * Every badge: earned ones in full colour with the date, unearned ones greyed

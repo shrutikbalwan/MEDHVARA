@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { checkAndAwardBadges } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -111,6 +112,7 @@ export async function saveProject(
 
   logStage("projects", "insert", { id: data.id, userId: user.id });
   revalidatePath("/projects");
+  await recordActivity(user.id, supabase);
   const newBadges = await checkAndAwardBadges(user.id, supabase);
   return { ok: true, id: data.id, newBadges };
 }
