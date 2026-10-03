@@ -3,8 +3,10 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { checkAndAwardBadges } from "@/lib/badges";
 import { logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
+import { badgesQuery } from "@/types/badge";
 import { PROFILE_PHOTO_BUCKET, type Profile } from "@/types/database";
 
 export type ProfileState = { error?: string };
@@ -134,5 +136,7 @@ export async function saveProfile(
 
   revalidatePath("/profile");
   revalidatePath("/dashboard");
-  redirect("/profile");
+  // Outside any try/catch: redirect() signals by throwing.
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  redirect(`/profile${badgesQuery(newBadges)}`);
 }

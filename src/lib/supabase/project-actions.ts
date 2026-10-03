@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { checkAndAwardBadges } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -9,6 +10,7 @@ import {
   PROJECT_STATUSES,
   type ProjectStatus,
 } from "@/types/project";
+import type { Badge } from "@/types/badge";
 import { DIFFICULTIES, type Difficulty } from "@/types/project-plan";
 
 export type SaveProjectInput = {
@@ -23,7 +25,9 @@ export type SaveProjectInput = {
   difficulty: string;
 };
 
-export type SaveProjectResult = { ok: true; id: string } | { ok: false; error: string };
+export type SaveProjectResult =
+  | { ok: true; id: string; newBadges: Badge[] }
+  | { ok: false; error: string };
 
 const MAX_ITEMS = 40;
 const MAX_ITEM_LENGTH = 500;
@@ -107,7 +111,8 @@ export async function saveProject(
 
   logStage("projects", "insert", { id: data.id, userId: user.id });
   revalidatePath("/projects");
-  return { ok: true, id: data.id };
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  return { ok: true, id: data.id, newBadges };
 }
 
 /** Shared error mapping so every project write explains itself the same way. */
@@ -139,6 +144,11 @@ const NO_ROWS_ERROR =
 
 export type ProjectMutationResult = { ok: true } | { ok: false; error: string };
 
+/** Status changes and edits can earn badges (e.g. reaching "Completed"). */
+export type ProjectUpdateResult =
+  | { ok: true; newBadges: Badge[] }
+  | { ok: false; error: string };
+
 /**
  * Updates only the status. Kept separate from the full edit so the dropdown can
  * save immediately without submitting every other field.
@@ -146,7 +156,7 @@ export type ProjectMutationResult = { ok: true } | { ok: false; error: string };
 export async function updateProjectStatus(
   id: string,
   status: string,
-): Promise<ProjectMutationResult> {
+): Promise<ProjectUpdateResult> {
   const supabase = await createClient();
 
   const {
@@ -182,7 +192,8 @@ export async function updateProjectStatus(
   logStage("projects", "status-update", { id, status, userId: user.id });
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
-  return { ok: true };
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  return { ok: true, newBadges };
 }
 
 export type UpdateProjectInput = SaveProjectInput & { status: string };
@@ -191,7 +202,7 @@ export type UpdateProjectInput = SaveProjectInput & { status: string };
 export async function updateProject(
   id: string,
   input: UpdateProjectInput,
-): Promise<ProjectMutationResult> {
+): Promise<ProjectUpdateResult> {
   const supabase = await createClient();
 
   const {
@@ -242,7 +253,8 @@ export async function updateProject(
   logStage("projects", "update", { id, status, userId: user.id });
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
-  return { ok: true };
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  return { ok: true, newBadges };
 }
 
 export async function deleteProject(id: string): Promise<ProjectMutationResult> {

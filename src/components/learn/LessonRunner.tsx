@@ -1,8 +1,10 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { saveTopicProgress } from "@/lib/supabase/learn-actions";
+import { badgesQuery } from "@/types/badge";
 import {
   LESSON_LEVELS,
   LESSON_QUIZ_LENGTH,
@@ -38,6 +40,8 @@ export function LessonRunner({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // The lesson is generated on click rather than on page load: each one uses
   // a message from the daily allowance, and a refresh or a stray visit should
@@ -79,6 +83,11 @@ export function LessonRunner({
       const result = await saveTopicProgress(topicId, score);
       if (result.ok) {
         setSaveState("saved");
+        // Same route, so this component keeps its state; the layout's
+        // BadgePopup picks the ids up from the URL.
+        if (result.newBadges.length > 0) {
+          router.replace(`${pathname}${badgesQuery(result.newBadges)}`, { scroll: false });
+        }
       } else {
         setSaveState("error");
         setSaveError(result.error);

@@ -8,6 +8,7 @@ import {
   updateProject,
   updateProjectStatus,
 } from "@/lib/supabase/project-actions";
+import { badgesQuery } from "@/types/badge";
 import { PROJECT_STATUSES } from "@/types/project";
 import type { Project } from "@/types/project";
 import { DIFFICULTIES } from "@/types/project-plan";
@@ -81,6 +82,15 @@ export function ProjectDetail({ project }: { project: Project }) {
     setDraft((prev) => ({ ...prev, [field]: value }));
   }
 
+  /** Refresh the page, carrying any new badges to the layout's popup. */
+  function showResult(newBadges: { id: string }[]) {
+    if (newBadges.length > 0) {
+      router.replace(`/projects/${project.id}${badgesQuery(newBadges)}`, { scroll: false });
+    } else {
+      router.refresh();
+    }
+  }
+
   function changeStatus(next: string) {
     const previous = status;
     setStatus(next);
@@ -94,7 +104,7 @@ export function ProjectDetail({ project }: { project: Project }) {
         setError(result.error);
         return;
       }
-      router.refresh();
+      showResult(result.newBadges);
     });
   }
 
@@ -116,7 +126,7 @@ export function ProjectDetail({ project }: { project: Project }) {
         return;
       }
       setIsEditing(false);
-      router.refresh();
+      showResult(result.newBadges);
     });
   }
 

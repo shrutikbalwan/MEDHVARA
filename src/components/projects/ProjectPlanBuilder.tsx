@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { saveProject } from "@/lib/supabase/project-actions";
+import { badgesQuery } from "@/types/badge";
 import { DIFFICULTIES } from "@/types/project-plan";
 
 import styles from "./ProjectPlanBuilder.module.css";
@@ -115,7 +116,7 @@ export function ProjectPlanBuilder() {
         setError(result.error);
         return;
       }
-      router.push("/projects");
+      router.push(`/projects${badgesQuery(result.newBadges)}`);
     });
   }
 

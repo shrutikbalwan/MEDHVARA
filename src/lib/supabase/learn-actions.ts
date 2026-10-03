@@ -2,12 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 
+import { checkAndAwardBadges } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
+import type { Badge } from "@/types/badge";
 import { LESSON_QUIZ_LENGTH } from "@/types/lesson";
 
-export type SaveProgressResult = { ok: true } | { ok: false; error: string };
+export type SaveProgressResult =
+  | { ok: true; newBadges: Badge[] }
+  | { ok: false; error: string };
 
 /**
  * Marks a topic completed for the signed-in user with their quiz score
@@ -78,5 +82,7 @@ export async function saveTopicProgress(
   logStage("learn", "progress.save", { topicId, score, userId: user.id });
   revalidatePath("/learn");
   revalidatePath(`/learn/${topicId}`);
-  return { ok: true };
+  // After the write, so this completion counts. Never fails the save.
+  const newBadges = await checkAndAwardBadges(user.id, supabase);
+  return { ok: true, newBadges };
 }
