@@ -1,0 +1,27 @@
+.nav {
+  display: flex;
+  gap: 4px;
+  /* On narrow screens the links scroll sideways instead of wrapping under
+     the brand and pushing the page down. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.link {
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.link:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+}
+
+.active {
+  opacity: 1;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--foreground) 9%, transparent);
+}
