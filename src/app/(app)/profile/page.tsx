@@ -3,29 +3,19 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { BadgeGrid } from "@/components/badges/BadgeGrid";
+import { CopyProfileLink } from "@/components/profile/CopyProfileLink";
 import { getEngineeringProfile } from "@/lib/supabase/engineering-profile";
 import { isProfileComplete } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
 
 import styles from "../app.module.css";
 import p from "./profile.module.css";
+import { Avatar, EarnedBadgeRow, StatsRow, Tags } from "./showcase";
 
 export const metadata: Metadata = { title: "Profile · MEDHVARA" };
 
 // Stats, badges, and projects change after every quiz and save.
 export const dynamic = "force-dynamic";
-
-function Tags({ values }: { values: string[] }) {
-  return (
-    <ul className={p.tags}>
-      {values.map((value) => (
-        <li key={value} className={p.tag}>
-          {value}
-        </li>
-      ))}
-    </ul>
-  );
-}
 
 /**
  * GitHub-style engineering profile for the signed-in user. The signed-in gate
@@ -51,21 +41,7 @@ export default async function ProfilePage() {
     <>
       {/* 1. Header */}
       <header className={p.header}>
-        {profile.ok && profile.photoUrl ? (
-          /*
-           * A plain <img> rather than next/image on purpose. The source is a
-           * signed URL on your Supabase host: it expires, and next/image would
-           * additionally require that host in `images.remotePatterns`, coupling
-           * build config to an env value. The Next docs recommend `unoptimized`
-           * for images behind authentication anyway, which is what this is.
-           */
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.photoUrl} alt="" width={96} height={96} className={p.photo} />
-        ) : (
-          <div className={p.photoFallback} aria-hidden="true">
-            {data?.name?.trim().charAt(0).toUpperCase() || "?"}
-          </div>
-        )}
+        <Avatar photoUrl={profile.ok ? profile.photoUrl : null} name={data?.name ?? null} />
 
         <div className={p.identity}>
           <h1 className={styles.title}>{complete ? data!.name : "Your profile"}</h1>
@@ -80,9 +56,19 @@ export default async function ProfilePage() {
             </p>
           ) : null}
 
-          <Link href="/profile/edit" className={p.editButton}>
-            {complete ? "Edit profile" : "Fill in your profile"}
-          </Link>
+          <div className={p.headerActions}>
+            <Link href="/profile/edit" className={p.editButton}>
+              {complete ? "Edit profile" : "Fill in your profile"}
+            </Link>
+            {complete ? (
+              <>
+                <CopyProfileLink userId={user.id} />
+                <Link href={`/profile/${user.id}`} className={p.inlineLink}>
+                  See what others see
+                </Link>
+              </>
+            ) : null}
+          </div>
         </div>
       </header>
 
@@ -116,20 +102,13 @@ export default async function ProfilePage() {
         {!stats.ok ? (
           <p className={p.empty}>Your stats could not be loaded right now.</p>
         ) : (
-          <dl className={p.stats}>
-            <div className={p.stat}>
-              <dt>Topics completed</dt>
-              <dd>{stats.topicsCompleted}</dd>
-            </div>
-            <div className={p.stat}>
-              <dt>Quizzes taken</dt>
-              <dd>{stats.quizzesTaken}</dd>
-            </div>
-            <div className={p.stat}>
-              <dt>Projects created</dt>
-              <dd>{stats.projectsCreated}</dd>
-            </div>
-          </dl>
+          <StatsRow
+            stats={[
+              { label: "Topics completed", value: stats.topicsCompleted },
+              { label: "Quizzes taken", value: stats.quizzesTaken },
+              { label: "Projects created", value: stats.projectsCreated },
+            ]}
+          />
         )}
       </section>
 
@@ -158,16 +137,7 @@ export default async function ProfilePage() {
                 to earn your first!
               </p>
             ) : (
-              <ul className={p.badgeRow}>
-                {badges.earned.map((badge) => (
-                  <li key={badge.id} className={p.badge} title={badge.description}>
-                    <span className={p.badgeIcon} aria-hidden="true">
-                      {badge.icon || "🏅"}
-                    </span>
-                    <span className={p.badgeName}>{badge.name}</span>
-                  </li>
-                ))}
-              </ul>
+              <EarnedBadgeRow badges={badges.earned} />
             )}
 
             {lockedCount > 0 ? (

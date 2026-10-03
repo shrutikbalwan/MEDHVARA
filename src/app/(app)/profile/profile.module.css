@@ -55,8 +55,16 @@
   opacity: 0.75;
 }
 
-.editButton {
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
   margin-top: 8px;
+  font-size: 14px;
+}
+
+.editButton {
   padding: 7px 14px;
   border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
   border-radius: 8px;
@@ -277,4 +285,19 @@
 .difficulty {
   border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
   opacity: 0.8;
+}
+
+/* ---- Public view ------------------------------------------------------- */
+
+.ownerBanner {
+  margin: 0 0 24px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #2f6feb 12%, transparent);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.projectStatic:hover {
+  background: none;
 }
