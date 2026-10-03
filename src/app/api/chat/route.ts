@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { CHAT_HISTORY_TURNS, CHAT_SYSTEM_PROMPT } from "@/config/prompts";
 import { claimDailyMessage } from "@/lib/daily-quota";
 import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
+import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { logSupabaseError } from "@/lib/supabase/usage";
 
 /** Route handlers are uncached for POST, but be explicit about it. */
 export const dynamic = "force-dynamic";
@@ -24,8 +24,9 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
+    logStageError("chat", "auth", authError ?? { message: "no user in session" });
     return NextResponse.json(
-      { error: "You need to be signed in to chat." },
+      { error: "You need to be signed in to chat.", stage: "auth" },
       { status: 401 },
     );
   }
@@ -35,7 +36,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     message = String(body?.message ?? "").trim();
-  } catch {
+  } catch (error) {
+    logStageError("chat", "input.parse", error, { userId: user.id });
     return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
   }
 
@@ -51,7 +53,8 @@ export async function POST(request: NextRequest) {
 
   // 3. Quota — shared with /api/project-builder. Reserved BEFORE the AI call
   //    and released further down if the AI call fails.
-  const quota = await claimDailyMessage(supabase, user.id);
+  logStage("chat", "start", { userId: user.id, length: message.length });
+  const quota = await claimDailyMessage(supabase, user.id, "chat");
   if (!quota.ok) return quota.response;
 
   // 4. Persist the user's message. RLS enforces that user_id is our own; the
@@ -61,10 +64,14 @@ export async function POST(request: NextRequest) {
     .insert({ user_id: user.id, role: "user", content: message });
 
   if (userInsertError) {
-    logSupabaseError("messages insert (user) failed", userInsertError);
+    logStageError("chat", "messages.insert-user", userInsertError, { userId: user.id });
     await quota.release();
     return NextResponse.json(
-      { error: "Could not save your message. Please try again." },
+      {
+        error: "Could not save your message. Please try again.",
+        stage: "messages.insert-user",
+        code: userInsertError.code,
+      },
       { status: 500 },
     );
   }
@@ -80,7 +87,9 @@ export async function POST(request: NextRequest) {
     .returns<StoredMessage[]>();
 
   // Non-fatal: without history the model still answers, just without context.
-  if (historyError) logSupabaseError("messages history read failed", historyError);
+  if (historyError) {
+    logStageError("chat", "messages.history", historyError, { userId: user.id });
+  }
 
   const conversation: ChatMessage[] = [
     { role: "system", content: CHAT_SYSTEM_PROMPT },
@@ -88,6 +97,7 @@ export async function POST(request: NextRequest) {
   ];
 
   // 6. The AI call.
+  logStage("chat", "ai.request", { userId: user.id, turns: conversation.length - 1 });
   let reply: string;
   try {
     reply = await createChatCompletion(conversation);
@@ -97,15 +107,17 @@ export async function POST(request: NextRequest) {
     if (error instanceof GroqError) {
       // error.message is written to be safe to show; upstream detail is logged,
       // not returned, so provider internals and the key never surface.
+      logStageError("chat", "ai.request", error, { userId: user.id, status: error.status });
       return NextResponse.json(
-        { error: `${error.message} Please try again in a moment.` },
+        { error: `${error.message} Please try again in a moment.`, stage: "ai.request" },
         { status: error.status },
       );
     }
 
-    console.error("Unexpected chat failure:", error);
+    // Includes a missing GROQ_API_KEY, which getGroqApiKey() throws as a plain Error.
+    logStageError("chat", "ai.unexpected", error, { userId: user.id });
     return NextResponse.json(
-      { error: "Something went wrong. Please try again." },
+      { error: "Something went wrong. Please try again.", stage: "ai.unexpected" },
       { status: 500 },
     );
   }
@@ -117,7 +129,7 @@ export async function POST(request: NextRequest) {
     .insert({ user_id: user.id, role: "assistant", content: reply });
 
   if (replyInsertError) {
-    logSupabaseError("messages insert (assistant) failed", replyInsertError);
+    logStageError("chat", "messages.insert-assistant", replyInsertError, { userId: user.id });
     return NextResponse.json({
       reply,
       warning: "Your reply was not saved to history.",
@@ -125,6 +137,7 @@ export async function POST(request: NextRequest) {
     });
   }
 
+  logStage("chat", "done", { userId: user.id, used: quota.used });
   return NextResponse.json({
     reply,
     usage: { used: quota.used, limit: quota.limit },

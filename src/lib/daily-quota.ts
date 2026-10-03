@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { DAILY_MESSAGE_LIMIT } from "@/config/prompts";
+import { logStage } from "@/lib/log";
 import { ensureProfileRow } from "@/lib/supabase/profile";
 import type { createClient } from "@/lib/supabase/server";
 import { releaseDailySlot, reserveDailySlot } from "@/lib/supabase/usage";
@@ -29,22 +30,30 @@ export type QuotaClaim =
 export async function claimDailyMessage(
   supabase: ServerClient,
   userId: string,
+  /** Log prefix of the calling route, e.g. "chat". */
+  scope: string,
 ): Promise<QuotaClaim> {
+  logStage(scope, "quota.ensure-profile", { userId });
   // A brand-new account has no profiles row, and daily_usage references
   // profiles. Non-fatal: if this fails, the reservation below fails too and
   // logs the precise cause.
   await ensureProfileRow(supabase, userId);
 
+  logStage(scope, "quota.reserve", { userId });
   const reservation = await reserveDailySlot(supabase, userId, DAILY_MESSAGE_LIMIT);
 
   if (!reservation.ok) {
-    // The exact Postgres code/message/details/hint are already on the server
-    // console. The client gets a generic sentence, since database internals
-    // are not the user's business.
+    // The full Postgres detail is already on the server console. The client
+    // gets a generic sentence plus the stage and code, which name the cause
+    // without exposing database internals.
     return {
       ok: false,
       response: NextResponse.json(
-        { error: "Could not check your daily usage. Please try again." },
+        {
+          error: "Could not check your daily usage. Please try again.",
+          stage: `quota:${reservation.stage}`,
+          code: reservation.error.code,
+        },
         { status: 500 },
       ),
     };
@@ -73,6 +82,7 @@ export async function claimDailyMessage(
       // A double release would hand the user a free message.
       if (released) return;
       released = true;
+      logStage(scope, "quota.release", { userId });
       await releaseDailySlot(supabase, userId);
     },
   };

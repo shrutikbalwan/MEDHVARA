@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 
+import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { logSupabaseError } from "@/lib/supabase/usage";
 import {
   DEFAULT_PROJECT_STATUS,
   PROJECT_STATUSES,
@@ -84,7 +84,7 @@ export async function saveProject(
     .single<{ id: string }>();
 
   if (error) {
-    logSupabaseError("projects insert failed", error);
+    logStageError("projects", "insert", error, { userId: user.id });
 
     // 42703 = undefined_column: the 0004 migration has not been run yet.
     if (error.code === "42703") {
@@ -105,6 +105,7 @@ export async function saveProject(
     return { ok: false, error: "Could not save the project. Please try again." };
   }
 
+  logStage("projects", "insert", { id: data.id, userId: user.id });
   revalidatePath("/projects");
   return { ok: true, id: data.id };
 }
@@ -170,14 +171,15 @@ export async function updateProjectStatus(
     .select("id");
 
   if (error) {
-    logSupabaseError("project status update failed", error);
+    logStageError("projects", "status-update", error, { id, status, userId: user.id });
     return { ok: false, error: describeWriteError(error) };
   }
   if (!data || data.length === 0) {
-    console.error(`[projects] status update matched 0 rows (id=${id}, user=${user.id})`);
+    logStageError("projects", "status-update", { code: "NO_ROWS", message: "update matched 0 rows" }, { id, status, userId: user.id });
     return { ok: false, error: NO_ROWS_ERROR };
   }
 
+  logStage("projects", "status-update", { id, status, userId: user.id });
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
   return { ok: true };
@@ -229,14 +231,15 @@ export async function updateProject(
     .select("id");
 
   if (error) {
-    logSupabaseError("project update failed", error);
+    logStageError("projects", "update", error, { id, userId: user.id });
     return { ok: false, error: describeWriteError(error) };
   }
   if (!data || data.length === 0) {
-    console.error(`[projects] update matched 0 rows (id=${id}, user=${user.id})`);
+    logStageError("projects", "update", { code: "NO_ROWS", message: "update matched 0 rows" }, { id, userId: user.id });
     return { ok: false, error: NO_ROWS_ERROR };
   }
 
+  logStage("projects", "update", { id, status, userId: user.id });
   revalidatePath("/projects");
   revalidatePath(`/projects/${id}`);
   return { ok: true };
@@ -261,14 +264,15 @@ export async function deleteProject(id: string): Promise<ProjectMutationResult> 
     .select("id");
 
   if (error) {
-    logSupabaseError("project delete failed", error);
+    logStageError("projects", "delete", error, { id, userId: user.id });
     return { ok: false, error: "Could not delete the project. Please try again." };
   }
   if (!data || data.length === 0) {
-    console.error(`[projects] delete matched 0 rows (id=${id}, user=${user.id})`);
+    logStageError("projects", "delete", { code: "NO_ROWS", message: "delete matched 0 rows" }, { id, userId: user.id });
     return { ok: false, error: NO_ROWS_ERROR };
   }
 
+  logStage("projects", "delete", { id, userId: user.id });
   revalidatePath("/projects");
   return { ok: true };
 }

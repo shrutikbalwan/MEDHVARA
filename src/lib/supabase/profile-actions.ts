@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { logSupabaseError } from "@/lib/supabase/usage";
 import { PROFILE_PHOTO_BUCKET, type Profile } from "@/types/database";
 
 export type ProfileState = { error?: string };
@@ -79,6 +79,7 @@ export async function saveProfile(
       .upload(newPhotoPath, photo, { contentType: photo.type, upsert: false });
 
     if (uploadError) {
+      logStageError("profile", "save.photo-upload", uploadError, { userId: user.id });
       return { error: `Photo upload failed: ${uploadError.message}` };
     }
   }
@@ -94,7 +95,7 @@ export async function saveProfile(
     .maybeSingle<Pick<Profile, "id" | "photo_url">>();
 
   if (readError) {
-    logSupabaseError("profile read failed", readError);
+    logStageError("profile", "save.read", readError, { userId: user.id });
     if (newPhotoPath) {
       await supabase.storage.from(PROFILE_PHOTO_BUCKET).remove([newPhotoPath]);
     }
@@ -117,7 +118,7 @@ export async function saveProfile(
     : await supabase.from("profiles").insert({ user_id: user.id, ...fields });
 
   if (writeError) {
-    logSupabaseError("profile write failed", writeError);
+    logStageError("profile", existing ? "save.update" : "save.insert", writeError, { userId: user.id });
     // Do not leave the just-uploaded file orphaned if the row write failed.
     if (newPhotoPath) {
       await supabase.storage.from(PROFILE_PHOTO_BUCKET).remove([newPhotoPath]);

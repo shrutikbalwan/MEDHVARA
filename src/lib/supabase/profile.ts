@@ -1,7 +1,7 @@
 import type { PostgrestError } from "@supabase/supabase-js";
 
+import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
-import { logSupabaseError } from "@/lib/supabase/usage";
 import { PROFILE_PHOTO_BUCKET, type Profile } from "@/types/database";
 
 /**
@@ -25,7 +25,7 @@ export async function getOwnProfile(): Promise<Profile | null> {
     .maybeSingle<Profile>();
 
   if (error) {
-    logSupabaseError("profile read failed", error);
+    logStageError("profile", "read", error, { userId: user.id });
     throw new Error(`Could not load profile: ${error.message}`);
   }
   return data;
@@ -62,7 +62,7 @@ export async function ensureProfileRow(
     .limit(1);
 
   if (readError) {
-    logSupabaseError("profile ensure: read failed", readError);
+    logStageError("profile", "ensure.read", readError, { userId });
     return { ok: false, error: readError };
   }
   if (data && data.length > 0) return { ok: true, created: false };
@@ -80,9 +80,12 @@ export async function ensureProfileRow(
   }
 
   // 23505 = a concurrent request created it first, which is the outcome we want.
-  if (!error || error.code === "23505") return { ok: true, created: !error };
+  if (!error || error.code === "23505") {
+    logStage("profile", "ensure.created", { userId, raced: Boolean(error) });
+    return { ok: true, created: !error };
+  }
 
-  logSupabaseError("profile ensure: insert failed", error);
+  logStageError("profile", "ensure.insert", error, { userId });
   return { ok: false, error };
 }
 
