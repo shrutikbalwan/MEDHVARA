@@ -1,7 +1,10 @@
 import { getCurrentStreak } from "@/lib/activity";
 import { listBadgeShowcase, type BadgeStatus } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
+import { pickRevisionTopics, type ProgressRow, type RevisionItem } from "@/lib/revision";
+import { getDailyChallenge } from "@/lib/supabase/challenge";
 import { createClient } from "@/lib/supabase/server";
+import type { ChallengeState } from "@/types/challenge";
 import type { ProjectCard } from "@/types/project";
 import type { Topic } from "@/types/topic";
 
@@ -18,11 +21,15 @@ export type DashboardData = {
         total: number;
         /** Lowest order_index not yet completed; null when all are done or none exist. */
         next: Topic | null;
+        /** Completed topics worth revisiting: low quiz scores, then long-untouched ones. */
+        revise: RevisionItem[];
       }
     | { ok: false };
   projects: { ok: true; recent: ProjectCard[] } | { ok: false };
   /** Consecutive active days, or null if activity_log could not be read. */
   streak: number | null;
+  /** Today's Daily Challenge, or ok: false if it could not be loaded. */
+  challenge: ChallengeState;
   /** Earned badges only, oldest first, plus the catalogue size for "X of Y". */
   badges: { ok: true; earned: BadgeStatus[]; total: number } | { ok: false };
 };
@@ -42,7 +49,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const [profileResult, topicsResult, progressResult, projectsResult, showcase, streakResult] = await Promise.all([
+  const [profileResult, topicsResult, progressResult, projectsResult, showcase, streakResult, challenge] = await Promise.all([
     // limit(1) rather than maybeSingle(): user_id is not guaranteed unique.
     supabase.from("profiles").select("name").eq("user_id", user.id).limit(1),
     supabase
@@ -52,12 +59,12 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       .order("subject", { ascending: true })
       .order("title", { ascending: true })
       .returns<Topic[]>(),
+    // Every row, not only completed ones: scores and dates feed "Revise these".
     supabase
       .from("topic_progress")
-      .select("topic_id")
+      .select("topic_id, completed, quiz_score, updated_at")
       .eq("user_id", user.id)
-      .eq("completed", true)
-      .returns<{ topic_id: string }[]>(),
+      .returns<ProgressRow[]>(),
     supabase
       .from("projects")
       .select("id, title, status, difficulty, created_at")
@@ -68,6 +75,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     listBadgeShowcase(user.id, supabase),
     // Logs its own failure; the page then simply hides the streak line.
     getCurrentStreak(user.id, supabase),
+    // Logs its own failure; the card then shows a message.
+    getDailyChallenge(user.id, supabase),
   ]);
 
   // Name: a read failure just means a nameless greeting.
@@ -89,7 +98,8 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     learning = { ok: false };
   } else {
     const topics = topicsResult.data ?? [];
-    const done = new Set((progressResult.data ?? []).map((row) => row.topic_id));
+    const progress = progressResult.data ?? [];
+    const done = new Set(progress.filter((row) => row.completed).map((row) => row.topic_id));
     // Count only progress on topics that still exist, so "X of Y" can never
     // read more than Y after a topic is deleted.
     const completed = topics.filter((topic) => done.has(topic.id)).length;
@@ -100,6 +110,7 @@ export async function getDashboardData(): Promise<DashboardData | null> {
       // Topics are already sorted by order_index, so the first unfinished one
       // is the next to take.
       next: topics.find((topic) => !done.has(topic.id)) ?? null,
+      revise: pickRevisionTopics(topics, progress),
     };
   }
 
@@ -129,7 +140,16 @@ export async function getDashboardData(): Promise<DashboardData | null> {
     projects: projects.ok ? projects.recent.length : "error",
     badges: badges.ok ? badges.earned.length : "error",
     streak: streakResult.ok ? streakResult.streak : "error",
+    revise: learning.ok ? learning.revise.length : "error",
+    challenge: challenge.ok ? (challenge.attempt ? "answered" : "open") : "error",
   });
 
-  return { name, learning, projects, badges, streak: streakResult.ok ? streakResult.streak : null };
+  return {
+    name,
+    learning,
+    projects,
+    badges,
+    streak: streakResult.ok ? streakResult.streak : null,
+    challenge,
+  };
 }

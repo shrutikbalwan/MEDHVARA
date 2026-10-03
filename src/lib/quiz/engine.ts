@@ -26,7 +26,8 @@ export function parseAnswer(text: unknown): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-function mulberry32(seed: number) {
+/** Small seeded PRNG: the same seed always gives the same sequence. */
+export function mulberry32(seed: number) {
   let a = seed >>> 0 || 1;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;

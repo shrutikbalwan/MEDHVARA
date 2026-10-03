@@ -17,6 +17,8 @@ type Facts = {
   hasCompletedProject: boolean;
   /** Consecutive active days in activity_log. */
   currentStreak: number;
+  /** Daily Challenges answered correctly, all time. */
+  challengesSolved: number;
 };
 
 /** Which fact sources loaded. A rule whose source failed is skipped, never guessed. */
@@ -26,6 +28,7 @@ type Loaded = {
   subjects: boolean;
   projects: boolean;
   activity: boolean;
+  challenges: boolean;
 };
 
 const RULES: Record<BadgeId, { needs: (keyof Loaded)[]; earned: (f: Facts) => boolean }> = {
@@ -50,6 +53,8 @@ const RULES: Record<BadgeId, { needs: (keyof Loaded)[]; earned: (f: Facts) => bo
   project_finisher: { needs: ["projects"], earned: (f) => f.hasCompletedProject },
   // Active on 7 consecutive days (activity_log, see src/lib/activity.ts).
   streak_7: { needs: ["activity"], earned: (f) => f.currentStreak >= 7 },
+  // Seven correct Daily Challenges, on any days (daily_challenge_attempts).
+  challenge_7: { needs: ["challenges"], earned: (f) => f.challengesSolved >= 7 },
 };
 
 /**
@@ -70,7 +75,7 @@ export async function checkAndAwardBadges(
   try {
     const supabase = client ?? (await createClient());
 
-    const [profileRes, progressRes, projectsRes, ownedRes, catalogueRes, streak] = await Promise.all([
+    const [profileRes, progressRes, projectsRes, ownedRes, catalogueRes, streak, challengesRes] = await Promise.all([
       // limit(1): user_id is not guaranteed unique on profiles.
       supabase.from("profiles").select("name").eq("user_id", userId).limit(1),
       supabase
@@ -95,6 +100,12 @@ export async function checkAndAwardBadges(
         .returns<Badge[]>(),
       // Logs its own failure; on failure streak_7 is skipped, not guessed.
       getCurrentStreak(userId, supabase),
+      supabase
+        .from("daily_challenge_attempts")
+        .select("challenge_date")
+        .eq("user_id", userId)
+        .eq("correct", true)
+        .returns<{ challenge_date: string }[]>(),
     ]);
 
     // Without these two there is no safe way to know what is new.
@@ -113,10 +124,17 @@ export async function checkAndAwardBadges(
       projects: !projectsRes.error,
       subjects: false,
       activity: streak.ok,
+      challenges: !challengesRes.error,
     };
     if (profileRes.error) logStageError("badges", "profile.read", profileRes.error, { userId });
     if (progressRes.error) logStageError("badges", "progress.read", progressRes.error, { userId });
     if (projectsRes.error) logStageError("badges", "projects.read", projectsRes.error, { userId });
+    if (challengesRes.error) {
+      logStageError("badges", "challenges.read", challengesRes.error, {
+        userId,
+        hint: "Run supabase/migrations/0009_daily_challenge.sql",
+      });
+    }
 
     const progress = progressRes.data ?? [];
     const completedIds = progress.filter((row) => row.completed).map((row) => row.topic_id);
@@ -152,6 +170,7 @@ export async function checkAndAwardBadges(
       projectCount: projects.length,
       hasCompletedProject: projects.some((p) => p.status === "Completed"),
       currentStreak: streak.ok ? streak.streak : 0,
+      challengesSolved: challengesRes.data?.length ?? 0,
     };
 
     const owned = new Set((ownedRes.data ?? []).map((row) => row.badge_id));

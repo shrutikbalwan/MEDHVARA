@@ -211,3 +211,17 @@
   background: color-mix(in srgb, #f97316 14%, transparent);
   font-size: 14px;
 }
+
+.reviseText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.retake {
+  flex: none;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}

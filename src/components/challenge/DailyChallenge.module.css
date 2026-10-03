@@ -1,0 +1,129 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, #6d5bd0 40%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, #6d5bd0 7%, transparent);
+}
+
+.prompt {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.input {
+  flex: 1 1 140px;
+  max-width: 240px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 9px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 15px;
+}
+
+.input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--foreground) 45%, transparent);
+  outline-offset: 1px;
+}
+
+.unit {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.submit {
+  padding: 10px 18px;
+  border: none;
+  border-radius: 9px;
+  background: var(--foreground);
+  color: var(--background);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: #9a5b00;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.correct {
+  border-color: #1f9d55;
+  background: color-mix(in srgb, #1f9d55 14%, transparent);
+}
+
+.wrong {
+  border-color: #e5484d;
+  background: color-mix(in srgb, #e5484d 12%, transparent);
+}
+
+.next {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.error {
+  margin: 0;
+  font-size: 14px;
+  color: #c4282d;
+}
+
+.meta {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .hint {
+    color: #ffc971;
+  }
+
+  .error {
+    color: #ff8589;
+  }
+}

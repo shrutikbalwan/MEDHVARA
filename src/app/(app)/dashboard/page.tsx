@@ -2,11 +2,13 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
+import { DailyChallenge } from "@/components/challenge/DailyChallenge";
 import { recordActivity } from "@/lib/activity";
 import { checkAndAwardBadges } from "@/lib/badges";
 import { getDashboardData } from "@/lib/supabase/dashboard";
 import { createClient } from "@/lib/supabase/server";
 import { badgesQuery } from "@/types/badge";
+import { LESSON_QUIZ_LENGTH } from "@/types/lesson";
 
 import styles from "../app.module.css";
 import dash from "./dashboard.module.css";
@@ -42,7 +44,7 @@ export default async function DashboardPage() {
   const data = await getDashboardData();
   if (!data) redirect("/login");
 
-  const { name, learning, projects, badges, streak } = data;
+  const { name, learning, projects, badges, streak, challenge } = data;
 
   return (
     <>
@@ -86,6 +88,27 @@ export default async function DashboardPage() {
           Plan a project
         </Link>
       </div>
+
+      <section className={dash.section}>
+        <div className={dash.sectionHeader}>
+          <h2 className={dash.sectionTitle}>Daily Challenge</h2>
+        </div>
+        {challenge.ok ? (
+          <DailyChallenge
+            // A new day is a new question: start the form afresh.
+            key={challenge.day}
+            day={challenge.day}
+            prompt={challenge.prompt}
+            unit={challenge.unit}
+            attempt={challenge.attempt}
+            solved={challenge.solved}
+          />
+        ) : (
+          <p className={dash.empty}>
+            Today&apos;s challenge could not be loaded right now. Please refresh.
+          </p>
+        )}
+      </section>
 
       <section className={dash.section}>
         <div className={dash.sectionHeader}>
@@ -142,6 +165,40 @@ export default async function DashboardPage() {
           </>
         )}
       </section>
+
+      {learning.ok && learning.completed > 0 ? (
+        <section className={dash.section}>
+          <div className={dash.sectionHeader}>
+            <h2 className={dash.sectionTitle}>Revise these</h2>
+          </div>
+          {learning.revise.length === 0 ? (
+            <p className={dash.empty}>
+              Nothing to revise — every quiz you&apos;ve taken scored at least half marks and is
+              fresh in your mind 💪
+            </p>
+          ) : (
+            <ul className={dash.list}>
+              {learning.revise.map((item) => (
+                <li key={item.topic.id}>
+                  <Link href={`/learn/${item.topic.id}`} className={dash.row}>
+                    <span className={dash.reviseText}>
+                      <span className={dash.rowTitle}>{item.topic.title}</span>
+                      <span className={dash.cardMeta}>
+                        {item.reason === "low_score"
+                          ? `Last quiz: ${item.score}/${LESSON_QUIZ_LENGTH}`
+                          : `Last practised ${item.daysSince} days ago`}
+                        {" · "}
+                        {item.topic.subject}
+                      </span>
+                    </span>
+                    <span className={dash.retake}>Retake →</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
 
       <section className={dash.section}>
         <div className={dash.sectionHeader}>
