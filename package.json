@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "node --import tsx --import ./src/test/setup.ts --test --test-reporter=spec \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
@@ -21,6 +23,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.1",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
