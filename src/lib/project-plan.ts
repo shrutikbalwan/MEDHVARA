@@ -18,7 +18,7 @@ export type ParseResult =
  * failure. Falls back to the outermost balanced {...}, tracking string state so
  * a brace inside a quoted value does not end the scan early.
  */
-function extractJsonObject(raw: string): string | null {
+export function extractJsonObject(raw: string): string | null {
   const trimmed = raw.trim();
 
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
