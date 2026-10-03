@@ -15,7 +15,7 @@ const MAX_TOPIC_LENGTH = 200;
 const MAX_ATTEMPTS = 2;
 
 /**
- * POST /api/learn  { topic: string, level: "beginner" | "intermediate" }
+ * POST /api/learn  { topic: string, level: "beginner" | "intermediate", subject?: string }
  *   → { lesson: { explanation, example, quiz: [{ question, options, correct_answer }] }, usage }
  *
  * Same shape as /api/project-builder: auth, input, the shared daily allowance,
@@ -42,10 +42,14 @@ export async function POST(request: NextRequest) {
   // 2. Input.
   let topic: string;
   let rawLevel: string;
+  let subject: string;
   try {
     const body = await request.json();
     topic = String(body?.topic ?? body?.title ?? "").trim();
     rawLevel = String(body?.level ?? "").trim().toLowerCase();
+    // Optional context: the same title can mean different things in
+    // different subjects ("Filters" in Signals vs. in Electronics).
+    subject = String(body?.subject ?? "").trim().slice(0, MAX_TOPIC_LENGTH);
   } catch (error) {
     logStageError("learn", "input.parse", error, { userId: user.id });
     return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
@@ -76,7 +80,10 @@ export async function POST(request: NextRequest) {
   // 4. Generate, validate, and retry once if the shape is wrong.
   const messages: ChatMessage[] = [
     { role: "system", content: LEARN_SYSTEM_PROMPT },
-    { role: "user", content: `Topic: ${topic}\nStudent level: ${level}` },
+    {
+      role: "user",
+      content: `${subject ? `Subject: ${subject}\n` : ""}Topic: ${topic}\nStudent level: ${level}`,
+    },
   ];
 
   let lastReason = "";
