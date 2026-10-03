@@ -1,98 +1,57 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 
 import { BadgeGrid } from "@/components/badges/BadgeGrid";
-import { listBadgeShowcase } from "@/lib/badges";
+import { getEngineeringProfile } from "@/lib/supabase/engineering-profile";
+import { isProfileComplete } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
-import {
-  getOwnProfile,
-  getPhotoSignedUrl,
-  isProfileComplete,
-} from "@/lib/supabase/profile";
 
 import styles from "../app.module.css";
-import profileStyles from "./profile.module.css";
+import p from "./profile.module.css";
 
 export const metadata: Metadata = { title: "Profile · MEDHVARA" };
 
-function Tags({ label, values }: { label: string; values: string[] }) {
-  if (values.length === 0) return null;
+// Stats, badges, and projects change after every quiz and save.
+export const dynamic = "force-dynamic";
+
+function Tags({ values }: { values: string[] }) {
   return (
-    <div className={profileStyles.detail}>
-      <h2 className={profileStyles.detailLabel}>{label}</h2>
-      <ul className={profileStyles.tags}>
-        {values.map((value) => (
-          <li key={value} className={profileStyles.tag}>
-            {value}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className={p.tags}>
+      {values.map((value) => (
+        <li key={value} className={p.tag}>
+          {value}
+        </li>
+      ))}
+    </ul>
   );
 }
 
-/** All badges, earned ones highlighted. Shown whether or not the profile is filled in. */
-async function BadgesSection() {
+/**
+ * GitHub-style engineering profile for the signed-in user. The signed-in gate
+ * lives in src/app/(app)/layout.tsx; editing stays at /profile/edit.
+ */
+export default async function ProfilePage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) redirect("/login");
 
-  const showcase = await listBadgeShowcase(user.id, supabase);
-  const earnedCount = showcase.ok
-    ? showcase.badges.filter((badge) => badge.earned_at !== null).length
-    : 0;
+  const { profile, stats, projects, badges } = await getEngineeringProfile(user.id);
 
-  return (
-    <section id="badges" className={profileStyles.badges}>
-      <h2 className={profileStyles.detailLabel}>
-        Badges{showcase.ok ? ` · ${earnedCount} of ${showcase.badges.length}` : ""}
-      </h2>
-      {!showcase.ok ? (
-        <p className={styles.placeholder}>Badges could not be loaded right now.</p>
-      ) : showcase.badges.length === 0 ? (
-        <p className={styles.placeholder}>No badges have been set up yet.</p>
-      ) : (
-        <BadgeGrid badges={showcase.badges} />
-      )}
-    </section>
-  );
-}
-
-export default async function ProfilePage() {
-  const profile = await getOwnProfile();
-
-  // The signup trigger creates a row immediately, so an empty profile is the
-  // normal state for a new account — not a missing one.
-  if (!profile || !isProfileComplete(profile)) {
-    return (
-      <>
-        <h1 className={styles.title}>Profile</h1>
-        <p className={styles.placeholder}>
-          Your profile is empty. Add your details so people know who you are.
-        </p>
-        <Link href="/profile/edit" className={styles.back}>
-          Fill in your profile →
-        </Link>
-        <BadgesSection />
-      </>
-    );
-  }
-
-  const photoUrl = await getPhotoSignedUrl(profile.photo_url);
-  const meta = [
-    profile.college,
-    profile.branch,
-    profile.year ? `Year ${profile.year}` : null,
-  ]
+  const data = profile.ok ? profile.data : null;
+  const complete = isProfileComplete(data);
+  const meta = [data?.college, data?.branch, data?.year ? `Year ${data.year}` : null]
     .filter(Boolean)
     .join(" · ");
+  const lockedCount = badges.ok ? badges.all.length - badges.earned.length : 0;
 
   return (
     <>
-      <div className={profileStyles.header}>
-        {photoUrl ? (
+      {/* 1. Header */}
+      <header className={p.header}>
+        {profile.ok && profile.photoUrl ? (
           /*
            * A plain <img> rather than next/image on purpose. The source is a
            * signed URL on your Supabase host: it expires, and next/image would
@@ -101,34 +60,167 @@ export default async function ProfilePage() {
            * for images behind authentication anyway, which is what this is.
            */
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoUrl}
-            alt=""
-            width={88}
-            height={88}
-            className={profileStyles.photo}
-          />
+          <img src={profile.photoUrl} alt="" width={96} height={96} className={p.photo} />
         ) : (
-          <div className={profileStyles.photoFallback} aria-hidden="true">
-            {profile.name?.charAt(0).toUpperCase() ?? "?"}
+          <div className={p.photoFallback} aria-hidden="true">
+            {data?.name?.trim().charAt(0).toUpperCase() || "?"}
           </div>
         )}
 
-        <div>
-          <h1 className={styles.title}>{profile.name}</h1>
-          {meta ? <p className={profileStyles.meta}>{meta}</p> : null}
+        <div className={p.identity}>
+          <h1 className={styles.title}>{complete ? data!.name : "Your profile"}</h1>
+          {meta ? <p className={p.meta}>{meta}</p> : null}
+          {data?.bio ? <p className={p.bio}>{data.bio}</p> : null}
+
+          {!profile.ok ? (
+            <p className={p.empty}>Your profile details could not be loaded right now.</p>
+          ) : !complete ? (
+            <p className={p.nudge}>
+              Add your name, college, and skills so your profile tells your story.
+            </p>
+          ) : null}
+
+          <Link href="/profile/edit" className={p.editButton}>
+            {complete ? "Edit profile" : "Fill in your profile"}
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {profile.bio ? <p className={profileStyles.bio}>{profile.bio}</p> : null}
+      {/* 2. Skills (and interests, which the form already collects) */}
+      <section className={p.section}>
+        <h2 className={p.sectionTitle}>Skills</h2>
+        {data && data.skills.length > 0 ? (
+          <Tags values={data.skills} />
+        ) : (
+          <p className={p.empty}>
+            No skills added yet —{" "}
+            <Link href="/profile/edit" className={p.inlineLink}>
+              add a few
+            </Link>{" "}
+            like C, Arduino, or PCB design.
+          </p>
+        )}
+        {data && data.interests.length > 0 ? (
+          <>
+            <h3 className={p.subTitle}>Interests</h3>
+            <Tags values={data.interests} />
+          </>
+        ) : null}
+      </section>
 
-      <Tags label="Interests" values={profile.interests} />
-      <Tags label="Skills" values={profile.skills} />
+      {/* 3. Stats */}
+      <section className={p.section} aria-labelledby="stats-title">
+        <h2 id="stats-title" className={p.sectionTitle}>
+          Stats
+        </h2>
+        {!stats.ok ? (
+          <p className={p.empty}>Your stats could not be loaded right now.</p>
+        ) : (
+          <dl className={p.stats}>
+            <div className={p.stat}>
+              <dt>Topics completed</dt>
+              <dd>{stats.topicsCompleted}</dd>
+            </div>
+            <div className={p.stat}>
+              <dt>Quizzes taken</dt>
+              <dd>{stats.quizzesTaken}</dd>
+            </div>
+            <div className={p.stat}>
+              <dt>Projects created</dt>
+              <dd>{stats.projectsCreated}</dd>
+            </div>
+          </dl>
+        )}
+      </section>
 
-      <Link href="/profile/edit" className={styles.back}>
-        Edit profile →
-      </Link>
-      <BadgesSection />
+      {/* 4. Badges */}
+      <section id="badges" className={p.section}>
+        <h2 className={p.sectionTitle}>
+          Badges
+          {badges.ok && badges.all.length > 0 ? (
+            <span className={p.count}>
+              {" "}
+              {badges.earned.length} of {badges.all.length}
+            </span>
+          ) : null}
+        </h2>
+
+        {!badges.ok ? (
+          <p className={p.empty}>Your badges could not be loaded right now.</p>
+        ) : (
+          <>
+            {badges.earned.length === 0 ? (
+              <p className={p.empty}>
+                No badges yet —{" "}
+                <Link href="/learn" className={p.inlineLink}>
+                  complete a lesson
+                </Link>{" "}
+                to earn your first!
+              </p>
+            ) : (
+              <ul className={p.badgeRow}>
+                {badges.earned.map((badge) => (
+                  <li key={badge.id} className={p.badge} title={badge.description}>
+                    <span className={p.badgeIcon} aria-hidden="true">
+                      {badge.icon || "🏅"}
+                    </span>
+                    <span className={p.badgeName}>{badge.name}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {lockedCount > 0 ? (
+              <details className={p.locked}>
+                <summary>
+                  {badges.earned.length === 0
+                    ? `See all ${badges.all.length} badges and how to earn them`
+                    : `See ${lockedCount} more to earn`}
+                </summary>
+                <BadgeGrid badges={badges.all.filter((badge) => badge.earned_at === null)} />
+              </details>
+            ) : null}
+          </>
+        )}
+      </section>
+
+      {/* 5. Projects */}
+      <section className={p.section}>
+        <h2 className={p.sectionTitle}>
+          Projects
+          {projects.ok && projects.list.length > 0 ? (
+            <span className={p.count}> {projects.list.length}</span>
+          ) : null}
+        </h2>
+
+        {!projects.ok ? (
+          <p className={p.empty}>Your projects could not be loaded right now.</p>
+        ) : projects.list.length === 0 ? (
+          <p className={p.empty}>
+            No projects yet —{" "}
+            <Link href="/projects/new" className={p.inlineLink}>
+              plan your first one
+            </Link>
+            .
+          </p>
+        ) : (
+          <ul className={p.projects}>
+            {projects.list.map((project) => (
+              <li key={project.id}>
+                <Link href={`/projects/${project.id}`} className={p.project}>
+                  <span className={p.projectTitle}>{project.title}</span>
+                  <span className={p.pills}>
+                    <span className={p.status}>{project.status || "Not set"}</span>
+                    {project.difficulty ? (
+                      <span className={p.difficulty}>{project.difficulty}</span>
+                    ) : null}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </>
   );
 }

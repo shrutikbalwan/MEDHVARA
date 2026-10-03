@@ -136,7 +136,7 @@ export async function checkAndAwardBadges(
         (profileRes.data?.[0] as { name?: string | null } | undefined)?.name?.trim(),
       ),
       completedCount: completedIds.length,
-      hasQuizScore: progress.some((row) => row.quiz_score !== null),
+      hasQuizScore: progress.some((row) => row.quiz_score != null),
       completedSubjects,
       projectCount: projects.length,
       hasCompletedProject: projects.some((p) => p.status === "Completed"),
