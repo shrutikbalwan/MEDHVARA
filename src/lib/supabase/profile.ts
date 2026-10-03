@@ -5,11 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 import { PROFILE_PHOTO_BUCKET, type Profile } from "@/types/database";
 
 /**
- * Loads the signed-in user's profile, or null if they have not created one.
+ * Loads the signed-in user's profile, or null if they have no row.
  *
- * The `.eq("user_id", ...)` filter is redundant next to the select policy,
- * which already limits visible rows to the caller's own. It stays so the query
- * is explicit and remains correct if the policies are ever loosened.
+ * The `.eq("user_id", ...)` filter is required, not decorative: profiles are
+ * readable by every signed-in user (0007_public_profiles.sql), so without it
+ * this would return someone else's row.
+ *
+ * interests and skills are nullable in the live table, and the bare row that
+ * ensureProfileRow() creates for a new account has both as NULL. They are
+ * normalised to [] here so no caller can crash on `.join` / `.length` — that
+ * crash was what took /profile/edit down for new accounts.
+ *
+ * Throws on a read failure. The caller must not fall back to an empty form:
+ * saving that would overwrite real data the user never saw. The (app)
+ * error boundary shows a retry instead.
  */
 export async function getOwnProfile(): Promise<Profile | null> {
   const supabase = await createClient();
@@ -22,13 +31,22 @@ export async function getOwnProfile(): Promise<Profile | null> {
     .from("profiles")
     .select("*")
     .eq("user_id", user.id)
-    .maybeSingle<Profile>();
+    // limit(1) rather than maybeSingle(): a duplicate row must not turn into
+    // a PGRST116 error and crash the page.
+    .limit(1)
+    .returns<Profile[]>();
 
   if (error) {
     logStageError("profile", "read", error, { userId: user.id });
     throw new Error(`Could not load profile: ${error.message}`);
   }
-  return data;
+  return normaliseProfile(data?.[0] ?? null);
+}
+
+/** Fills NULL array columns with [], so a profile row is always safe to render. */
+export function normaliseProfile(profile: Profile | null): Profile | null {
+  if (!profile) return null;
+  return { ...profile, interests: profile.interests ?? [], skills: profile.skills ?? [] };
 }
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;

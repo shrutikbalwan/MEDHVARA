@@ -79,7 +79,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
         </span>
         <input
           name="interests"
-          defaultValue={profile?.interests.join(", ") ?? ""}
+          defaultValue={(profile?.interests ?? []).join(", ")}
           placeholder="machine learning, design, startups"
         />
       </label>
@@ -90,7 +90,7 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
         </span>
         <input
           name="skills"
-          defaultValue={profile?.skills.join(", ") ?? ""}
+          defaultValue={(profile?.skills ?? []).join(", ")}
           placeholder="python, react, figma"
         />
       </label>
@@ -127,7 +127,8 @@ export function ProfileForm({ profile }: { profile: Profile | null }) {
         </p>
       ) : null}
 
-      <SubmitButton isEditing={Boolean(profile)} />
+      {/* A bare auto-created row has no name yet, so it reads as "create". */}
+      <SubmitButton isEditing={Boolean(profile?.name?.trim())} />
     </form>
   );
 }

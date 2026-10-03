@@ -100,17 +100,26 @@ export function ProjectPlanBuilder() {
     setError(null);
 
     startSaving(async () => {
-      const result = await saveProject({
-        title: draft.title,
-        problem_statement: draft.problem_statement,
-        architecture_overview: draft.architecture_overview,
-        objectives: fromLines(draft.objectives),
-        components: fromLines(draft.components),
-        technologies: fromLines(draft.technologies),
-        development_steps: fromLines(draft.development_steps),
-        subjects_to_learn_first: fromLines(draft.subjects_to_learn_first),
-        difficulty: draft.difficulty,
-      });
+      // A rejected server action inside a transition would otherwise be
+      // rethrown to the error boundary and discard the edited plan.
+      let result: Awaited<ReturnType<typeof saveProject>>;
+      try {
+        result = await saveProject({
+          title: draft.title,
+          problem_statement: draft.problem_statement,
+          architecture_overview: draft.architecture_overview,
+          objectives: fromLines(draft.objectives),
+          components: fromLines(draft.components),
+          technologies: fromLines(draft.technologies),
+          development_steps: fromLines(draft.development_steps),
+          subjects_to_learn_first: fromLines(draft.subjects_to_learn_first),
+          difficulty: draft.difficulty,
+        });
+      } catch (error) {
+        console.error("[projects] FAILED stage=insert (client)", error);
+        setError("Could not reach the server. Check your connection and try again.");
+        return;
+      }
 
       if (!result.ok) {
         setError(result.error);

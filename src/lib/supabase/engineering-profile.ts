@@ -1,6 +1,6 @@
 import { listBadgeShowcase, type BadgeStatus } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
-import { getPhotoSignedUrl } from "@/lib/supabase/profile";
+import { getPhotoSignedUrl, normaliseProfile } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database";
 import type { ProjectCard } from "@/types/project";
@@ -53,11 +53,7 @@ export async function getEngineeringProfile(userId: string): Promise<Engineering
     logStageError("profile", "page.profile", profileRes.error, { userId });
     profile = { ok: false };
   } else {
-    const data = profileRes.data?.[0] ?? null;
-    // Profile fields come from a form, so arrays can still be null on old rows.
-    const normalised = data
-      ? { ...data, skills: data.skills ?? [], interests: data.interests ?? [] }
-      : null;
+    const normalised = normaliseProfile(profileRes.data?.[0] ?? null);
     profile = {
       ok: true,
       data: normalised,
