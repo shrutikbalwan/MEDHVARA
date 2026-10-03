@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { CHAT_HISTORY_TURNS, CHAT_SYSTEM_PROMPT } from "@/config/prompts";
 import { claimDailyMessage } from "@/lib/daily-quota";
-import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
+import { runTutorTool, TUTOR_TOOLS, type ToolRun } from "@/lib/calculators/tutor-tools";
+import { createToolChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
 import { logStage, logStageError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
@@ -98,9 +99,29 @@ export async function POST(request: NextRequest) {
 
   // 6. The AI call.
   logStage("chat", "ai.request", { userId: user.id, turns: conversation.length - 1 });
+  // The model may call the verified calculators; every run is kept so the
+  // real working can be shown under the reply.
+  const toolRuns: ToolRun[] = [];
   let reply: string;
   try {
-    reply = await createChatCompletion(conversation);
+    reply = await createToolChatCompletion(conversation, {
+      tools: TUTOR_TOOLS,
+      runTool: (call) => {
+        const run = runTutorTool(call.function.name, call.function.arguments);
+        toolRuns.push(run);
+        logStage("chat", "ai.tool", {
+          userId: user.id,
+          tool: run.name,
+          ok: run.ok,
+          ...(run.ok ? {} : { error: run.error }),
+        });
+        return {
+          content: JSON.stringify(
+            run.ok ? { result: run.result, summary: run.summary } : { error: run.error },
+          ),
+        };
+      },
+    });
   } catch (error) {
     await quota.release();
 
@@ -120,6 +141,15 @@ export async function POST(request: NextRequest) {
       { error: "Something went wrong. Please try again.", stage: "ai.unexpected" },
       { status: 500 },
     );
+  }
+
+  // Append the calculations exactly as the engine produced them, so the
+  // numbers the student relies on never depend on the model copying them
+  // correctly. Stored with the reply, so history shows them too.
+  const calculations = toolRuns.flatMap((run) => (run.ok ? [run.summary] : []));
+  const uniqueCalculations = [...new Set(calculations)];
+  if (uniqueCalculations.length > 0) {
+    reply += `\n\n🧮 Calculated by MEDHVARA:\n${uniqueCalculations.map((line) => `• ${line}`).join("\n")}`;
   }
 
   // 7. Persist the reply. The user already has their answer at this point, so a
