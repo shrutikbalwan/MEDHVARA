@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { DAILY_MESSAGE_LIMIT, PROJECT_BUILDER_SYSTEM_PROMPT } from "@/config/prompts";
 import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
 import { parseProjectPlan } from "@/lib/project-plan";
+import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
 import { releaseDailySlot, reserveDailySlot } from "@/lib/supabase/usage";
 
@@ -50,6 +51,9 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  // 3a. Same new-account guard as /api/chat: daily_usage references profiles.
+  await ensureProfileRow(supabase, user.id);
 
   // 3. Quota — the same daily allowance as /api/chat, sharing one counter, so a
   //    student cannot get 30 chats *and* 30 plans out of a 30-message budget.

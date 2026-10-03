@@ -6,6 +6,7 @@ import {
   DAILY_MESSAGE_LIMIT,
 } from "@/config/prompts";
 import { createChatCompletion, GroqError, type ChatMessage } from "@/lib/groq";
+import { ensureProfileRow } from "@/lib/supabase/profile";
 import { createClient } from "@/lib/supabase/server";
 import {
   logSupabaseError,
@@ -55,6 +56,11 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
+
+  // 3a. A brand-new account has no profiles row, and the usage and message
+  //     tables reference profiles. Create a bare row first. Non-fatal: if it
+  //     fails, the quota step below logs the real cause.
+  await ensureProfileRow(supabase, user.id);
 
   // 3. Quota. Reserved BEFORE the AI call: reads today's row, inserts it with
   //    count 1 if this is the first message of the day, otherwise increments.
