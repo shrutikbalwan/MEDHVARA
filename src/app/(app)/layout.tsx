@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { AppNav } from "@/components/nav/AppNav";
 import { createClient } from "@/lib/supabase/server";
 
 import styles from "./app.module.css";
@@ -30,9 +31,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link href="/dashboard" className={styles.brand}>
-          MEDHVARA
-        </Link>
+        <div className={styles.headerLeft}>
+          <Link href="/dashboard" className={styles.brand}>
+            MEDHVARA
+          </Link>
+          <AppNav />
+        </div>
         <div className={styles.headerRight}>
           <Link href="/profile" className={styles.email}>
             {user.email}

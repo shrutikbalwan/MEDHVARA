@@ -1,0 +1,163 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.primary,
+.secondary {
+  padding: 11px 20px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.secondary {
+  border: 1px solid color-mix(in srgb, var(--foreground) 25%, transparent);
+  color: inherit;
+}
+
+.secondary:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 36px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.viewAll {
+  font-size: 14px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.viewAll:hover,
+.inlineLink {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.stat {
+  margin: 0;
+  font-size: 15px;
+}
+
+.stat strong {
+  font-size: 22px;
+}
+
+.bar {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 10%, transparent);
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #1f9d55;
+}
+
+.empty {
+  margin: 0;
+  padding: 16px;
+  border: 1px dashed color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.card:hover,
+.row:hover {
+  background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.cardLabel {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+.cardTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.cardMeta {
+  font-size: 13px;
+  opacity: 0.65;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--foreground) 14%, transparent);
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.rowTitle {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.status {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--foreground) 12%, transparent);
+  font-size: 12px;
+  font-weight: 500;
+}
