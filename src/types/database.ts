@@ -15,6 +15,11 @@
 
 export const PROFILE_PHOTO_BUCKET = "profile-photos";
 
+/**
+ * `interests` and `skills` are nullable text[] in the database (a bare row
+ * from ensureProfileRow has both NULL). They are typed as arrays because every
+ * loader runs rows through normaliseProfile() / its own `?? []` first.
+ */
 export type Profile = {
   id: string;
   /** FK to auth.users.id — the column the app filters and writes on. */

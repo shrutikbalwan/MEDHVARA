@@ -80,7 +80,17 @@ export function LessonRunner({
     setSaveState("saving");
     setSaveError(null);
     startTransition(async () => {
-      const result = await saveTopicProgress(topicId, score);
+      // A rejected server action inside a transition is rethrown to the error
+      // boundary and would replace the whole lesson, losing the score.
+      let result: Awaited<ReturnType<typeof saveTopicProgress>>;
+      try {
+        result = await saveTopicProgress(topicId, score);
+      } catch (error) {
+        console.error("[learn] FAILED stage=progress.save (client)", error);
+        setSaveState("error");
+        setSaveError("Could not reach the server to save your progress. Please try again.");
+        return;
+      }
       if (result.ok) {
         setSaveState("saved");
         // Same route, so this component keeps its state; the layout's

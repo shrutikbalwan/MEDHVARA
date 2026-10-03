@@ -38,7 +38,13 @@ export function BadgeToasts() {
 
     // Only badges the user really holds come back, so a hand-edited link
     // cannot fake one.
-    void loadEarnedBadges(param.split(",")).then((found) => {
+    // A failed lookup only means no toast; never an unhandled rejection.
+    const lookup = loadEarnedBadges(param.split(",")).catch((error: unknown) => {
+      console.error("[badges] FAILED stage=toast.load (client)", error);
+      return [] as Badge[];
+    });
+
+    void lookup.then((found) => {
       if (cancelled) return;
       setToasts((current) => [
         ...current,

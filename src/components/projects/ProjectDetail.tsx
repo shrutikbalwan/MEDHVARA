@@ -97,7 +97,15 @@ export function ProjectDetail({ project }: { project: Project }) {
     setError(null);
 
     startTransition(async () => {
-      const result = await updateProjectStatus(project.id, next);
+      let result: Awaited<ReturnType<typeof updateProjectStatus>>;
+      try {
+        result = await updateProjectStatus(project.id, next);
+      } catch (error) {
+        console.error("[projects] FAILED stage=status-update (client)", error);
+        setStatus(previous);
+        setError("Could not reach the server. Check your connection and try again.");
+        return;
+      }
       if (!result.ok) {
         // Put the dropdown back so it never shows a value the database rejected.
         setStatus(previous);
@@ -111,15 +119,22 @@ export function ProjectDetail({ project }: { project: Project }) {
   function save() {
     setError(null);
     startTransition(async () => {
-      const result = await updateProject(project.id, {
-        ...draft,
-        objectives: fromLines(draft.objectives),
-        components: fromLines(draft.components),
-        technologies: fromLines(draft.technologies),
-        development_steps: fromLines(draft.development_steps),
-        subjects_to_learn_first: fromLines(draft.subjects_to_learn_first),
-        status,
-      });
+      let result: Awaited<ReturnType<typeof updateProject>>;
+      try {
+        result = await updateProject(project.id, {
+          ...draft,
+          objectives: fromLines(draft.objectives),
+          components: fromLines(draft.components),
+          technologies: fromLines(draft.technologies),
+          development_steps: fromLines(draft.development_steps),
+          subjects_to_learn_first: fromLines(draft.subjects_to_learn_first),
+          status,
+        });
+      } catch (error) {
+        console.error("[projects] FAILED stage=update (client)", error);
+        setError("Could not reach the server. Check your connection and try again.");
+        return;
+      }
 
       if (!result.ok) {
         setError(result.error);
@@ -133,7 +148,15 @@ export function ProjectDetail({ project }: { project: Project }) {
   function remove() {
     setError(null);
     startTransition(async () => {
-      const result = await deleteProject(project.id);
+      let result: Awaited<ReturnType<typeof deleteProject>>;
+      try {
+        result = await deleteProject(project.id);
+      } catch (error) {
+        console.error("[projects] FAILED stage=delete (client)", error);
+        setError("Could not reach the server. Check your connection and try again.");
+        setConfirmingDelete(false);
+        return;
+      }
       if (!result.ok) {
         setError(result.error);
         setConfirmingDelete(false);
