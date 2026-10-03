@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { recordActivity } from "@/lib/activity";
 import { checkAndAwardBadges } from "@/lib/badges";
 import { logStage, logStageError } from "@/lib/log";
 import { ensureProfileRow } from "@/lib/supabase/profile";
@@ -82,7 +83,9 @@ export async function saveTopicProgress(
   logStage("learn", "progress.save", { topicId, score, userId: user.id });
   revalidatePath("/learn");
   revalidatePath(`/learn/${topicId}`);
-  // After the write, so this completion counts. Never fails the save.
+  // Activity first, so today counts toward the streak badge checked next.
+  // Neither can fail the save.
+  await recordActivity(user.id, supabase);
   const newBadges = await checkAndAwardBadges(user.id, supabase);
   return { ok: true, newBadges };
 }
